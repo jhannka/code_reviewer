@@ -5,7 +5,7 @@
   "main": "menu.py",
   "scripts": {
     "test": "PYTHONPATH=.:code_reviewer .venv/bin/pytest",
-    "review": ".venv/bin/adk run code_reviewer 'Revisá los cambios de Git modificados pero no committeados en base a las skills de diseño del proyecto y dame el informe de discrepancias.'",
+    "review": ".venv/bin/adk run code_reviewer 'Review the modified but uncommitted Git changes based on the project design skills and provide a discrepancy report.'",
     "menu": "python3 menu.py"
   },
   "keywords": [
