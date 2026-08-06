@@ -39,6 +39,22 @@ Before setting up the project, ensure you have **Python 3.10+**, **Node.js 18+**
 
 ---
 
+## Console UI & Option Instructions
+
+When launching the interactive console UI (`npm run menu`), the following option menu is presented:
+
+![Console Options Menu](docs/assets/cli_menu_mockup.jpg)
+
+### Option Breakdown
+
+* **1. Review Git Changes**: Triggers the `change_finder` agent to scan uncommitted git modifications (via git status & diff), runs the error analysis pipeline, and proposes changes.
+* **2. Review Specific File**: Prompts for a relative file path, reads its source content, and runs the specialized agents sequence on that file.
+* **3. List Project Design Skills**: Indexes and displays a summary of all active global (`~/.gemini/config/skills/`) and project-local (`.agents/skills/`) design guidelines.
+* **4. Configure Gemini Model & API Key**: Modifies target API key credentials and switches between Gemini model contexts dynamically.
+* **5. Exit**: Safely quits the interactive console session.
+
+---
+
 ## Specialized Agent Pipeline
 
 The execution flow is coordinated sequentially by a central **`coordinator_agent`** which delegates tasks to the following specialized agents:
