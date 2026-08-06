@@ -109,8 +109,34 @@ When launching the interactive console UI (`npm run menu`), the following option
 * **1. Review Git Changes**: Triggers the `change_finder` agent to scan uncommitted git modifications (via git status & diff), runs the error analysis pipeline, and proposes changes.
 * **2. Review Specific File**: Prompts for a relative file path, reads its source content, and runs the specialized agents sequence on that file.
 * **3. List Project Design Skills**: Indexes and displays a summary of all active global (`~/.gemini/config/skills/`) and project-local (`.agents/skills/`) design guidelines.
-* **4. Configure Gemini Model & API Key**: Modifies target API key credentials and switches between Gemini model contexts dynamically.
+* **4. Configure Settings**: Opens a dynamic configuration dashboard to customize the active LLM model, configure API Keys dynamically, select veracity levels, and toggle CLI languages. Inside the configuration menu, use **`S`** to Save and return, or **`Esc` / `Q`** to Cancel and discard changes.
 * **5. Exit**: Safely quits the interactive console session.
+
+---
+
+## Multi-Model Support & Veracity Settings
+
+The code reviewer features full support for multiple AI model providers and precise analysis strictness options, accessible via the interactive **Configure Settings** menu.
+
+### Supported Models & Requirements
+
+| Provider | Models | Extra Requirements |
+|---|---|---|
+| **Google Gemini** | `gemini-2.5-flash` (Default), `gemini-2.5-pro`, `gemini-1.5-flash` (Free developer tier) | None (uses built-in ADK client) |
+| **Anthropic Claude** | `claude-3-5-sonnet`, `claude-3-5-haiku` | Requires Anthropic packages:<br>`.venv/bin/pip install "google-adk[extensions]"` |
+| **OpenAI / Codex** | `openai/gpt-4o`, `openai/gpt-4o-mini` | Requires LiteLLM packages:<br>`.venv/bin/pip install "google-adk[extensions]"` |
+
+### Dynamic API Key Fields
+
+The configuration submenu dynamically adapts to your selected model. It will only ask for the keys needed for the active model (e.g. `ANTHROPIC_API_KEY` for Claude, `OPENAI_API_KEY` for OpenAI, and `GOOGLE_API_KEY` for Gemini), keeping your environment clean.
+
+### Veracity & Accuracy Control
+
+You can adjust how strict or creative the reviewer agents are by choosing a **Veracity Level**:
+
+1. **Strict / Deterministic** (LLM Temperature: `0.0`): Best for bug audits and technical compliance. Minimizes hallucinations and focuses on exact code discrepancies.
+2. **Balanced** (LLM Temperature: `0.4`): Balance between strict bug detection and descriptive code improvement explanations.
+3. **Creative / Suggestions** (LLM Temperature: `0.7`): Ideal for brainstorming alternative algorithms, clean code refactorings, and design pattern proposals.
 
 ---
 

@@ -2,6 +2,19 @@
 
 All notable changes to this project will be documented in this file.
 
+## [1.2.0] - 2026-08-05
+
+This release introduces comprehensive multi-model support (Google Gemini, Anthropic Claude, and OpenAI/Codex) alongside dynamic LLM veracity controls (temperature configurations) in the settings panel.
+
+### Added
+- **Multi-Model Support**: Integrated Gemini (Pro, Flash, and Free Developer Tier), Anthropic Claude (Sonnet, Haiku), and OpenAI/Codex (GPT-4o, GPT-4o-mini).
+- **Dynamic API Key Config**: Settings menu dynamically displays Google, Anthropic, and/or OpenAI API key inputs depending on the selected model to reduce configuration complexity.
+- **Veracity & Accuracy Levels**: Set LLM temperature via a new interactive selection menu:
+  - *Strict/Deterministic* (Temp: 0.0) for rigorous bug audits.
+  - *Balanced* (Temp: 0.4) for standard feedback.
+  - *Creative* (Temp: 0.7) for alternative coding ideas.
+- **Under the Hood Integration**: Passes temperature dynamically to the entire multi-agent pipeline using Google GenAI SDK's `GenerateContentConfig`.
+
 ## [1.1.0] - 2026-08-05
 
 This release introduces a fully interactive, modernized console UI with keyboard navigation, custom ANSI coloring, and multi-language support (English/Spanish).

@@ -5,7 +5,7 @@ import subprocess
 # Obtener el directorio de instalación absoluto de este script
 INSTALL_DIR = os.path.dirname(os.path.abspath(__file__))
 
-__version__ = "1.0.0"
+__version__ = "1.2.0"
 CLI_LANG = "es"  # Idioma por defecto
 
 # ANSI escape codes for modern terminal coloring
@@ -30,6 +30,7 @@ LOCALES = {
         "opt_4": "Configurar API Key, Modelo e Idioma",
         "opt_5": "Salir",
         "status_bar": "[↑/↓] Navegar  |  [Enter] Seleccionar  |  [Esc/Q] Salir",
+        "config_status_bar": "[↑/↓] Navegar  |  [Enter] Editar  |  [S] Guardar  |  [Esc/Q] Cancelar",
         "update_available": "✨ ¡NUEVA ACTUALIZACIÓN DISPONIBLE: v{}! ✨",
         "update_changes": "Cambios en esta versión:",
         "update_prompt": "¿Deseás descargar e instalar la actualización? [s/N]: ",
@@ -56,13 +57,7 @@ LOCALES = {
         "config_key": "- Google API Key: {}",
         "config_model": "- Modelo de Gemini: {}",
         "config_lang": "- Idioma actual: {}",
-        "config_key_prompt": "\nIngresá la nueva Google API Key (presioná Enter para mantener la actual): ",
-        "config_model_title": "\nModelos de Gemini recomendados:",
-        "config_model_options": "1. gemini-3.5-flash (Por defecto, rápido y de bajo costo)\n2. gemini-2.5-flash\n3. gemini-2.5-pro (Excelente para análisis de código complejo)\n4. Ingresar otro modelo personalizado\n5. Mantener el actual",
-        "config_model_prompt": "Seleccioná una opción para el modelo [1-5]: ",
-        "config_lang_title": "\nIdiomas disponibles:",
-        "config_lang_options": "1. Español\n2. English\n3. Mantener el actual",
-        "config_lang_prompt": "Seleccioná una opción para el idioma [1-3]: ",
+        "config_key_prompt": "\nIngresá el nuevo valor (presioná Enter para mantener el actual): ",
         "config_saved": "\n✅ Configuración guardada correctamente.",
         "not_configured": "No configurada",
         "exit_msg": "\n¡Nos vemos! Éxitos en el código.",
@@ -72,16 +67,27 @@ LOCALES = {
         "rev_canceled": "\n\n(Revisión cancelada por el usuario)",
         "exec_err": "\n❌ Error al ejecutar el agente: {}",
         "adk_missing": "\n❌ Error: No se encontró el ejecutable de ADK en el entorno virtual.\nAsegurate de haber creado el entorno virtual '.venv' e instalado los paquetes.",
-        "config_opt_key": "Clave API: {}",
+        
+        "config_opt_key": "Clave API Google: {}",
+        "config_opt_anthropic_key": "Clave API Anthropic: {}",
+        "config_opt_openai_key": "Clave API OpenAI: {}",
         "config_opt_model": "Modelo: {}",
+        "config_opt_veracity": "Nivel de Veracidad: {}",
         "config_opt_lang": "Idioma: {}",
-        "config_opt_save": "Guardar y Regresar",
-        "config_opt_cancel": "Cancelar y Volver",
-        "model_menu_title": "SELECCIONAR MODELO DE GEMINI",
+        
+        "model_menu_title": "SELECCIONAR MODELO",
         "model_custom": "Ingresar modelo personalizado...",
         "lang_menu_title": "SELECCIONAR IDIOMA DEL CLI",
+        "veracity_menu_title": "SELECCIONAR VERACIDAD (PRECISIÓN)",
         "back": "Regresar",
-        "custom_model_prompt": "Ingresá el identificador del modelo (ej: gemini-1.5-pro): "
+        "custom_model_prompt": "Ingresá el identificador del modelo (ej: gemini-1.5-pro): ",
+        
+        "veracity_strict": "Estricto",
+        "veracity_desc_strict": "Temp: 0.0 - Riguroso y determinista, ideal para bugs",
+        "veracity_balanced": "Balanceado",
+        "veracity_desc_balanced": "Temp: 0.4 - Recomendaciones y explicaciones moderadas",
+        "veracity_creative": "Creativo",
+        "veracity_desc_creative": "Temp: 0.7 - Alternativas y lluvia de ideas de refactorización"
     },
     "en": {
         "title": "ARCHITECT AGENT - CODE REVIEW MENU",
@@ -91,6 +97,7 @@ LOCALES = {
         "opt_4": "Configure API Key, Model & Language",
         "opt_5": "Exit",
         "status_bar": "[↑/↓] Navigate  |  [Enter] Select  |  [Esc/Q] Exit",
+        "config_status_bar": "[↑/↓] Navigate  |  [Enter] Edit  |  [S] Save  |  [Esc/Q] Cancel",
         "update_available": "✨ NEW UPDATE AVAILABLE: v{}! ✨",
         "update_changes": "Changes in this version:",
         "update_prompt": "Do you want to download and install the update? [y/N]: ",
@@ -117,13 +124,7 @@ LOCALES = {
         "config_key": "- Google API Key: {}",
         "config_model": "- Gemini Model: {}",
         "config_lang": "- Current Language: {}",
-        "config_key_prompt": "\nEnter new Google API Key (press Enter to keep current): ",
-        "config_model_title": "\nRecommended Gemini Models:",
-        "config_model_options": "1. gemini-3.5-flash (Default, fast & cost-efficient)\n2. gemini-2.5-flash\n3. gemini-2.5-pro (Excellent for complex code reasoning)\n4. Enter custom model ID\n5. Keep current",
-        "config_model_prompt": "Select an option for the model [1-5]: ",
-        "config_lang_title": "\nAvailable Languages:",
-        "config_lang_options": "1. Español\n2. English\n3. Keep current",
-        "config_lang_prompt": "Select an option for the language [1-3]: ",
+        "config_key_prompt": "\nEnter new value (press Enter to keep current): ",
         "config_saved": "\n✅ Configuration saved successfully.",
         "not_configured": "Not configured",
         "exit_msg": "\nGoodbye! Happy coding.",
@@ -133,16 +134,27 @@ LOCALES = {
         "rev_canceled": "\n\n(Review canceled by user)",
         "exec_err": "\n❌ Error running the agent: {}",
         "adk_missing": "\n❌ Error: ADK executable not found in virtual environment.\nMake sure you created the '.venv' directory and installed packages.",
-        "config_opt_key": "API Key: {}",
+        
+        "config_opt_key": "Google API Key: {}",
+        "config_opt_anthropic_key": "Anthropic API Key: {}",
+        "config_opt_openai_key": "OpenAI API Key: {}",
         "config_opt_model": "Model: {}",
+        "config_opt_veracity": "Veracity Level: {}",
         "config_opt_lang": "Language: {}",
-        "config_opt_save": "Save and Return",
-        "config_opt_cancel": "Cancel and Return",
-        "model_menu_title": "SELECT GEMINI MODEL",
+        
+        "model_menu_title": "SELECT MODEL",
         "model_custom": "Enter custom model ID...",
         "lang_menu_title": "SELECT CLI LANGUAGE",
+        "veracity_menu_title": "SELECT VERACITY (ACCURACY)",
         "back": "Back",
-        "custom_model_prompt": "Enter custom model ID (eg: gemini-1.5-pro): "
+        "custom_model_prompt": "Enter custom model ID (eg: gemini-1.5-pro): ",
+        
+        "veracity_strict": "Strict",
+        "veracity_desc_strict": "Temp: 0.0 - Rigorous and deterministic, ideal for bugs",
+        "veracity_balanced": "Balanced",
+        "veracity_desc_balanced": "Temp: 0.4 - Moderate recommendations and explanations",
+        "veracity_creative": "Creative",
+        "veracity_desc_creative": "Temp: 0.7 - Creative alternatives and refactoring ideas"
     }
 }
 
@@ -427,85 +439,144 @@ def execute_option(choice: int):
         print(t("exit_msg"))
 
 def configure_settings_interactive():
-    """Panel de configuración interactiva con submenús y confirmación explícita."""
+    """Panel de configuración interactiva con submenús dinámicos y atajos de guardado/cancelado."""
     vars = load_env_vars()
     temp_key = vars.get("GOOGLE_API_KEY", "")
-    temp_model = vars.get("GEMINI_MODEL", "gemini-3.5-flash")
+    temp_anthropic_key = vars.get("ANTHROPIC_API_KEY", "")
+    temp_openai_key = vars.get("OPENAI_API_KEY", "")
+    temp_model = vars.get("GEMINI_MODEL", "gemini-2.5-flash")
     temp_lang = vars.get("CLI_LANG", "es").strip().lower()
+    temp_veracity = vars.get("REVIEW_VERACITY", "strict").strip().lower()
     
     selected_index = 0
     while True:
-        if temp_key and temp_key != "placeholder_key":
-            display_key = temp_key[:4] + "..." + temp_key[-4:] if len(temp_key) > 8 else "Configured"
-        else:
-            display_key = t("not_configured") + " (placeholder)"
+        # Ofuscar claves para mostrarlas en el menú
+        ofuscated_google = temp_key[:4] + "..." + temp_key[-4:] if len(temp_key) > 8 else (t("not_configured") if not temp_key else "Configured")
+        ofuscated_anthropic = temp_anthropic_key[:4] + "..." + temp_anthropic_key[-4:] if len(temp_anthropic_key) > 8 else (t("not_configured") if not temp_anthropic_key else "Configured")
+        ofuscated_openai = temp_openai_key[:4] + "..." + temp_openai_key[-4:] if len(temp_openai_key) > 8 else (t("not_configured") if not temp_openai_key else "Configured")
+        
+        # Construir dinámicamente los ítems del menú de acuerdo al modelo
+        items = []
+        items.append((f"{t('config_opt_key', ofuscated_google)}", "google_key"))
+        
+        # Claude (Anthropic) requiere clave de Anthropic
+        if temp_model.startswith("claude-") or "anthropic" in temp_model:
+            items.append((f"{t('config_opt_anthropic_key', ofuscated_anthropic)}", "anthropic_key"))
+            
+        # OpenAI (GPT) requiere clave de OpenAI
+        if temp_model.startswith("openai/") or "gpt" in temp_model:
+            items.append((f"{t('config_opt_openai_key', ofuscated_openai)}", "openai_key"))
             
         display_lang = "Español" if temp_lang == "es" else "English"
         
-        rendered_options = [
-            f"[{1}] {t('config_opt_key', display_key)}",
-            f"[{2}] {t('config_opt_model', temp_model)}",
-            f"[{3}] {t('config_opt_lang', display_lang)}",
-            f"[{4}] {t('config_opt_save')}",
-            f"[{5}] {t('config_opt_cancel')}"
-        ]
+        items.append((f"{t('config_opt_model', temp_model)}", "model"))
+        items.append((f"{t('config_opt_veracity', t('veracity_' + temp_veracity))}", "veracity"))
+        items.append((f"{t('config_opt_lang', display_lang)}", "lang"))
+        
+        # Ajustar el índice si disminuye el tamaño del menú
+        selected_index = selected_index % len(items)
         
         clear_screen()
         print(f"{CYAN}┌──────────────────────────────────────────────────┐{RESET}")
         print(f"{CYAN}│{BOLD} {t('config_title').center(48)} {RESET}{CYAN}│{RESET}")
         print(f"{CYAN}└──────────────────────────────────────────────────┘{RESET}")
         
-        for idx, opt in enumerate(rendered_options):
+        for idx, (label, _) in enumerate(items):
             if idx == selected_index:
-                print(f" {GREEN}➔ {BOLD}{opt}{RESET}")
+                print(f" {GREEN}➔ {BOLD}[{idx+1}] {label}{RESET}")
             else:
-                print(f"    {GRAY}{opt}{RESET}")
+                print(f"    {GRAY}[{idx+1}] {label}{RESET}")
         
         print(f"{CYAN}--------------------------------------------------{RESET}")
-        print(f"{GRAY}{t('status_bar')}{RESET}")
+        print(f"{GRAY}{t('config_status_bar')}{RESET}")
         
         key = get_key()
         if key == "up":
-            selected_index = (selected_index - 1) % len(rendered_options)
+            selected_index = (selected_index - 1) % len(items)
             continue
         elif key == "down":
-            selected_index = (selected_index + 1) % len(rendered_options)
+            selected_index = (selected_index + 1) % len(items)
             continue
-        elif key in ["1", "2", "3", "4", "5"]:
+        elif key == "s":  # Atajo Guardar
+            vars["GOOGLE_API_KEY"] = temp_key
+            vars["ANTHROPIC_API_KEY"] = temp_anthropic_key
+            vars["OPENAI_API_KEY"] = temp_openai_key
+            vars["GEMINI_MODEL"] = temp_model
+            vars["CLI_LANG"] = temp_lang
+            vars["REVIEW_VERACITY"] = temp_veracity
+            save_env_vars(vars)
+            print(t("config_saved"))
+            input(t("press_enter"))
+            break
+        elif key == "esc":  # Atajo Cancelar
+            load_env_vars()  # Restaurar idioma global original cargado de .env al cancelar
+            break
+        elif key in [str(i+1) for i in range(len(items))]:
             selected_index = int(key) - 1
-            action = selected_index
+            tag = items[selected_index][1]
         elif key == "enter":
-            action = selected_index
-        elif key == "esc":
-            action = 4
+            tag = items[selected_index][1]
         else:
             continue
             
-        if action == 0:  # API Key
+        if tag == "google_key":
             clear_screen()
             print(f"{CYAN}--- {t('config_opt_key', '')} ---{RESET}")
             new_key = input(t("config_key_prompt")).strip()
             if new_key:
                 temp_key = new_key
                 
-        elif action == 1:  # Model Selector Submenu
+        elif tag == "anthropic_key":
+            clear_screen()
+            print(f"{CYAN}--- {t('config_opt_anthropic_key', '')} ---{RESET}")
+            new_key = input(t("config_key_prompt")).strip()
+            if new_key:
+                temp_anthropic_key = new_key
+                
+        elif tag == "openai_key":
+            clear_screen()
+            print(f"{CYAN}--- {t('config_opt_openai_key', '')} ---{RESET}")
+            new_key = input(t("config_key_prompt")).strip()
+            if new_key:
+                temp_openai_key = new_key
+                
+        elif tag == "model":
             model_options = [
-                "gemini-3.5-flash",
                 "gemini-2.5-flash",
                 "gemini-2.5-pro",
+                "gemini-1.5-flash",
+                "claude-3-5-sonnet",
+                "claude-3-5-haiku",
+                "openai/gpt-4o",
+                "openai/gpt-4o-mini",
                 t("model_custom"),
                 t("back")
             ]
             idx_model = select_from_menu(t("model_menu_title"), model_options)
-            if idx_model >= 0 and idx_model < 3:
+            if idx_model >= 0 and idx_model < 7:
                 temp_model = model_options[idx_model]
-            elif idx_model == 3:
+            elif idx_model == 7:
                 clear_screen()
                 custom = input(t("custom_model_prompt")).strip()
                 if custom:
                     temp_model = custom
                     
-        elif action == 2:  # Language Selector Submenu
+        elif tag == "veracity":
+            veracity_options = [
+                f"{t('veracity_strict')} - {t('veracity_desc_strict')}",
+                f"{t('veracity_balanced')} - {t('veracity_desc_balanced')}",
+                f"{t('veracity_creative')} - {t('veracity_desc_creative')}",
+                t("back")
+            ]
+            idx_ver = select_from_menu(t("veracity_menu_title"), veracity_options)
+            if idx_ver == 0:
+                temp_veracity = "strict"
+            elif idx_ver == 1:
+                temp_veracity = "balanced"
+            elif idx_ver == 2:
+                temp_veracity = "creative"
+                
+        elif tag == "lang":
             lang_options = [
                 "Español",
                 "English",
@@ -519,26 +590,16 @@ def configure_settings_interactive():
             elif idx_lang == 1:
                 temp_lang = "en"
                 CLI_LANG = "en"
-                
-        elif action == 3:  # Guardar
-            vars["GOOGLE_API_KEY"] = temp_key
-            vars["GEMINI_MODEL"] = temp_model
-            vars["CLI_LANG"] = temp_lang
-            save_env_vars(vars)
-            print(t("config_saved"))
-            input(t("press_enter"))
-            break
-            
-        elif action == 4:  # Cancelar
-            load_env_vars()  # Recarga el idioma original de .env
-            break
 
 def configure_settings_non_interactive():
     """Configuración secuencial fallback para entornos no-interactivos."""
     vars = load_env_vars()
     current_key = vars.get("GOOGLE_API_KEY", "")
-    current_model = vars.get("GEMINI_MODEL", "gemini-3.5-flash")
+    current_anthropic = vars.get("ANTHROPIC_API_KEY", "")
+    current_openai = vars.get("OPENAI_API_KEY", "")
+    current_model = vars.get("GEMINI_MODEL", "gemini-2.5-flash")
     current_lang = vars.get("CLI_LANG", "es").strip().lower()
+    current_veracity = vars.get("REVIEW_VERACITY", "strict").strip().lower()
     
     if current_key and current_key != "placeholder_key":
         display_key = current_key[:4] + "..." + current_key[-4:] if len(current_key) > 8 else "Configured"
@@ -549,6 +610,7 @@ def configure_settings_non_interactive():
     print(t("config_key", display_key))
     print(t("config_model", current_model))
     print(t("config_lang", "Español" if current_lang == "es" else "English"))
+    print(t("config_opt_veracity", current_veracity))
     print("----------------------------------")
     
     new_key = input(t("config_key_prompt")).strip()
@@ -556,20 +618,43 @@ def configure_settings_non_interactive():
         vars["GOOGLE_API_KEY"] = new_key
         
     print(t("config_model_title"))
-    print(t("config_model_options"))
-    
+    print("1. gemini-2.5-flash\n2. gemini-2.5-pro\n3. gemini-1.5-flash\n4. claude-3-5-sonnet\n5. openai/gpt-4o\n6. Custom")
     sel = input(t("config_model_prompt")).strip()
     if sel == "1":
-        vars["GEMINI_MODEL"] = "gemini-3.5-flash"
-    elif sel == "2":
         vars["GEMINI_MODEL"] = "gemini-2.5-flash"
-    elif sel == "3":
+    elif sel == "2":
         vars["GEMINI_MODEL"] = "gemini-2.5-pro"
+    elif sel == "3":
+        vars["GEMINI_MODEL"] = "gemini-1.5-flash"
     elif sel == "4":
-        custom = input("Enter custom model ID (eg: gemini-1.5-pro): ").strip()
+        vars["GEMINI_MODEL"] = "claude-3-5-sonnet"
+    elif sel == "5":
+        vars["GEMINI_MODEL"] = "openai/gpt-4o"
+    elif sel == "6":
+        custom = input("Enter model ID: ").strip()
         if custom:
             vars["GEMINI_MODEL"] = custom
             
+    # Si requiere otras llaves, solicitarlas
+    target_model = vars.get("GEMINI_MODEL", current_model)
+    if target_model.startswith("claude-") or "anthropic" in target_model:
+        a_key = input("Enter Anthropic API Key: ").strip()
+        if a_key:
+            vars["ANTHROPIC_API_KEY"] = a_key
+    if target_model.startswith("openai/") or "gpt" in target_model:
+        o_key = input("Enter OpenAI API Key: ").strip()
+        if o_key:
+            vars["OPENAI_API_KEY"] = o_key
+            
+    print("Select Veracity: 1. Strict, 2. Balanced, 3. Creative")
+    ver_sel = input("Veracity choice [1-3]: ").strip()
+    if ver_sel == "1":
+        vars["REVIEW_VERACITY"] = "strict"
+    elif ver_sel == "2":
+        vars["REVIEW_VERACITY"] = "balanced"
+    elif ver_sel == "3":
+        vars["REVIEW_VERACITY"] = "creative"
+        
     print(t("config_lang_title"))
     print(t("config_lang_options"))
     
