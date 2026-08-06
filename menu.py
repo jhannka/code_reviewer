@@ -5,6 +5,110 @@ import subprocess
 # Obtener el directorio de instalación absoluto de este script
 INSTALL_DIR = os.path.dirname(os.path.abspath(__file__))
 
+__version__ = "1.0.0"
+
+def check_for_updates():
+    """Verifica si hay actualizaciones en el repositorio remoto usando la API de GitHub."""
+    import urllib.request
+    import json
+    import ssl
+    
+    # 1. Intentar primero obtener la última release publicada (con descripción de cambios)
+    release_url = "https://api.github.com/repos/jhannka/code_reviewer/releases/latest"
+    req = urllib.request.Request(release_url, headers={"User-Agent": "code-reviewer-cli"})
+    try:
+        context = ssl._create_unverified_context()
+        with urllib.request.urlopen(req, timeout=1.5, context=context) as response:
+            if response.status == 200:
+                data = json.loads(response.read().decode("utf-8"))
+                tag_name = data.get("tag_name", "").strip()
+                body = data.get("body", "Sin descripción.")
+                _prompt_update_if_needed(tag_name, body)
+                return
+    except Exception:
+        pass
+
+    # 2. Si falla (ej. si no hay releases publicadas aún), caer a la lista de tags
+    tags_url = "https://api.github.com/repos/jhannka/code_reviewer/tags"
+    req = urllib.request.Request(tags_url, headers={"User-Agent": "code-reviewer-cli"})
+    try:
+        context = ssl._create_unverified_context()
+        with urllib.request.urlopen(req, timeout=1.5, context=context) as response:
+            if response.status == 200:
+                tags = json.loads(response.read().decode("utf-8"))
+                if tags:
+                    tag_name = tags[0].get("name", "").strip()
+                    body = "Hay una nueva versión disponible en GitHub. Consultá el CHANGELOG.md para ver los detalles."
+                    _prompt_update_if_needed(tag_name, body)
+    except Exception:
+        pass
+
+def _prompt_update_if_needed(tag_name: str, body: str):
+    remote_ver = tag_name.lstrip("v")
+    local_ver = __version__.lstrip("v")
+    if remote_ver != local_ver:
+        try:
+            remote_parts = [int(x) for x in remote_ver.split(".")]
+            local_parts = [int(x) for x in local_ver.split(".")]
+            if remote_parts > local_parts:
+                _show_update_dialog(tag_name, remote_ver, body)
+        except ValueError:
+            if remote_ver > local_ver:
+                _show_update_dialog(tag_name, remote_ver, body)
+
+def _show_update_dialog(tag_name: str, remote_ver: str, body: str):
+    print("\n==================================================")
+    print(f"✨ ¡NUEVA ACTUALIZACIÓN DISPONIBLE: v{remote_ver}! ✨")
+    print("==================================================")
+    print(f"Cambios en esta versión:\n{body}")
+    print("--------------------------------------------------")
+    ans = input("¿Deseás descargar e instalar la actualización? [s/N]: ").strip().lower()
+    if ans in ["s", "si", "yes", "y"]:
+        apply_update(tag_name)
+        sys.exit(0)
+
+def apply_update(tag_name: str):
+    """Aplica la actualización de manera segura utilizando comandos de Git."""
+    print("\n📦 Iniciando actualización limpia y segura...")
+    try:
+        diff_status = subprocess.run(["git", "diff", "--quiet"], cwd=INSTALL_DIR)
+        cached_status = subprocess.run(["git", "diff", "--cached", "--quiet"], cwd=INSTALL_DIR)
+        if diff_status.returncode != 0 or cached_status.returncode != 0:
+            print("\n❌ Error: Tenés cambios locales no committeados en el revisor de código.")
+            print("Guardá tus cambios (git stash o git commit) antes de actualizar para evitar pérdidas.")
+            input("\nPresioná Enter para continuar...")
+            return
+    except Exception as e:
+        print(f"\n❌ Error al verificar estado del repositorio: {str(e)}")
+        input("\nPresioná Enter para continuar...")
+        return
+        
+    try:
+        print("📥 Buscando nuevas etiquetas en GitHub...")
+        subprocess.run(["git", "fetch", "--tags"], cwd=INSTALL_DIR, check=True)
+        
+        print(f"🔄 Cambiando a la versión {tag_name}...")
+        subprocess.run(["git", "checkout", f"tags/{tag_name}"], cwd=INSTALL_DIR, check=True)
+        
+        if os.name != 'nt':
+            install_sh = os.path.join(INSTALL_DIR, "install.sh")
+            if os.path.exists(install_sh):
+                print("🔄 Actualizando enlace simbólico global...")
+                subprocess.run(["chmod", "+x", install_sh], cwd=INSTALL_DIR)
+                sym_path = "/opt/homebrew/bin/code-reviewer"
+                wrapper_path = os.path.join(INSTALL_DIR, "bin", "code-reviewer")
+                if os.path.exists(sym_path):
+                    subprocess.run(["ln", "-sf", wrapper_path, sym_path])
+                    
+        print("\n✅ ¡Actualización completada con éxito!")
+        print("Reiniciando el programa...")
+        input("\nPresioná Enter para finalizar (ejecutá 'code-reviewer' de nuevo para aplicar)...")
+    except Exception as e:
+        print(f"\n❌ Error durante el proceso de actualización: {str(e)}")
+        print("Se recomienda realizar un 'git pull' manual.")
+        input("\nPresioná Enter para continuar...")
+
+
 def clear_screen():
     os.system('cls' if os.name == 'nt' else 'clear')
 
@@ -62,6 +166,7 @@ def run_agent_query(query: str):
         print(f"\n❌ Error al ejecutar el agente: {str(e)}")
 
 def menu():
+    check_for_updates()
     while True:
         clear_screen()
         print("==================================================")
