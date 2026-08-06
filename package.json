@@ -1,0 +1,19 @@
+{
+  "name": "google-adk-project",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "review": ".venv/bin/adk run code_reviewer 'Revisá los cambios de Git modificados pero no committeados en base a las skills de diseño del proyecto y dame el informe de discrepancias.'",
+    "menu": "python3 menu.py"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "commonjs",
+  "dependencies": {
+    "@google/adk": "^1.5.0",
+    "@google/adk-devtools": "^1.5.0"
+  }
+}

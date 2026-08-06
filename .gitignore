@@ -1,0 +1,22 @@
+# Virtual environment
+.venv/
+
+# Node dependencies
+node_modules/
+
+# Python cache
+__pycache__/
+*.py[cod]
+*$py.class
+.pytest_cache/
+
+# ADK local sessions
+.adk/
+code_reviewer/.adk/
+
+# Environment variables
+.env
+code_reviewer/.env
+
+# OS metadata
+.DS_Store
