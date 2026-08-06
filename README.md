@@ -37,6 +37,25 @@ Before setting up the project, ensure you have **Python 3.10+**, **Node.js 18+**
    PYTHONPATH=.:code_reviewer .venv/bin/pytest
    ```
 
+### Global Installation (Run from anywhere)
+
+To run the reviewer agent from the root of **any** project on your system without navigating back to the code reviewer installation directory:
+
+* **macOS & Linux**:
+  Run the automated installation script to create a global symlink in `/usr/local/bin/`:
+  ```bash
+  ./install.sh
+  ```
+  Now you can run the reviewer globally from any target directory:
+  ```bash
+  code-reviewer
+  ```
+* **Windows**:
+  Add the absolute path of the project's `bin/` directory to your Windows system or user `PATH` environment variable. Once added, you can run the executable globally from any console:
+  ```cmd
+  code-reviewer
+  ```
+
 ---
 
 ## Console UI & Option Instructions

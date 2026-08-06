@@ -2,12 +2,15 @@ import os
 import sys
 import subprocess
 
+# Obtener el directorio de instalación absoluto de este script
+INSTALL_DIR = os.path.dirname(os.path.abspath(__file__))
+
 def clear_screen():
     os.system('cls' if os.name == 'nt' else 'clear')
 
 def load_env_vars():
-    """Lee las variables del archivo .env local."""
-    env_path = os.path.join("code_reviewer", ".env")
+    """Lee las variables del archivo .env local en el directorio de instalación."""
+    env_path = os.path.join(INSTALL_DIR, "code_reviewer", ".env")
     vars = {}
     if os.path.exists(env_path):
         try:
@@ -22,8 +25,8 @@ def load_env_vars():
     return vars
 
 def save_env_vars(vars):
-    """Guarda las variables en el archivo .env local."""
-    env_path = os.path.join("code_reviewer", ".env")
+    """Guarda las variables en el archivo .env local en el directorio de instalación."""
+    env_path = os.path.join(INSTALL_DIR, "code_reviewer", ".env")
     try:
         with open(env_path, "w", encoding="utf-8") as f:
             for key, val in vars.items():
@@ -33,10 +36,10 @@ def save_env_vars(vars):
 
 def run_agent_query(query: str):
     """Ejecuta el agente ADK usando la CLI compartiendo la terminal interactiva."""
-    adk_path = os.path.join(".venv", "bin", "adk")
+    adk_path = os.path.join(INSTALL_DIR, ".venv", "bin", "adk")
     if not os.path.exists(adk_path):
         # Intentar en Windows
-        adk_path = os.path.join(".venv", "Scripts", "adk")
+        adk_path = os.path.join(INSTALL_DIR, ".venv", "Scripts", "adk")
         if not os.path.exists(adk_path):
             print("\n❌ Error: No se encontró el ejecutable de ADK en el entorno virtual.")
             print("Asegurate de haber creado el entorno virtual '.venv' e instalado los paquetes.")
@@ -44,9 +47,13 @@ def run_agent_query(query: str):
             
     print(f"\n🚀 Iniciando revisión: '{query}'\n")
     try:
+        # Configurar variables de entorno personalizadas incluyendo el PYTHONPATH del instalador
+        env = os.environ.copy()
+        env["PYTHONPATH"] = f"{INSTALL_DIR}:{env.get('PYTHONPATH', '')}"
+        
         # Usamos subprocess.run permitiendo que herede stdin, stdout y stderr
         # para que el usuario pueda interactuar con el agente en tiempo real.
-        result = subprocess.run([adk_path, "run", "code_reviewer", query])
+        result = subprocess.run([adk_path, "run", "code_reviewer", query], env=env)
         if result.returncode != 0:
             print("\n⚠️  El agente terminó con algún error (código de salida diferente de 0).")
     except KeyboardInterrupt:
@@ -83,7 +90,7 @@ def menu():
         elif opcion == "2":
             clear_screen()
             print("--- REVISAR ARCHIVO ESPECÍFICO ---")
-            file_path = input("Ingresá la ruta del archivo (relativa al proyecto, ej: code_reviewer/agent.py): ").strip()
+            file_path = input("Ingresá la ruta del archivo a revisar: ").strip()
             if not file_path:
                 print("Ruta vacía. Cancelando operación.")
                 input("\nPresioná Enter para volver al menú...")
@@ -151,7 +158,7 @@ def menu():
                 vars["GOOGLE_GENAI_USE_ENTERPRISE"] = "0"
                 
             save_env_vars(vars)
-            print("\n✅ Configuración guardada correctamente en 'code_reviewer/.env'.")
+            print(f"\n✅ Configuración guardada correctamente en '{os.path.join(INSTALL_DIR, 'code_reviewer', '.env')}'")
             input("\nPresioná Enter para volver al menú...")
             
         elif opcion == "5":
