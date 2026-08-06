@@ -1,55 +1,84 @@
-# Code Reviewer Agent (Hexagonal Architecture)
+# Multi-Agent Code Reviewer (Hexagonal Architecture)
 
-Un agente de revisión de código interactivo basado en la terminal, diseñado con **Google ADK (Agent Development Kit)** y estructurado bajo **Arquitectura Hexagonal**. El agente inspecciona cambios de Git y archivos del proyecto para verificar la adherencia a directivas de diseño (skills) y proponer refactorizaciones seguras.
+A CLI-based code reviewer application built with **Google ADK (Agent Development Kit)**. It coordinates a sequential pipeline of 6 specialized AI agents to analyze, propose, apply, and verify code changes based on project-specific design rules (skills). The codebase is structured using **Hexagonal Architecture** for dynamic path resolution, dependency injection, and clean unit testing.
 
 ---
 
-## Quick path
+## Quick Path
 
-1. **Instalar dependencias**:
+1. **Install dependencies**:
    ```bash
    python3 -m venv .venv
    .venv/bin/pip install google-adk python-dotenv pytest
    npm install
    ```
-2. **Configurar variables**:
-   Copia el archivo de plantilla y configúralo con tu clave de API de Gemini:
+2. **Configure environment secrets**:
+   Copy the environment variables template and add your Gemini API key:
    ```bash
    cp code_reviewer/.env.example code_reviewer/.env
-   # Edita code_reviewer/.env y añade tu GOOGLE_API_KEY
+   # Edit code_reviewer/.env and set your GOOGLE_API_KEY
    ```
-3. **Ejecutar el menú**:
+3. **Launch the CLI**:
    ```bash
-   npm run menu   # O alternativamente: python3 menu.py
+   npm run menu   # Or alternatively: python3 menu.py
    ```
-4. **Verificar tests**:
+4. **Run verification tests**:
    ```bash
    PYTHONPATH=.:code_reviewer .venv/bin/pytest
    ```
 
 ---
 
-## Details
+## Specialized Agent Pipeline
 
-| Componente | Rol en la Arquitectura Hexagonal |
-|------------|-----------------------------------|
-| **`code_reviewer/domain`** | Contiene la lógica de dominio pura (`CodeReviewToolsService`), totalmente aislada de la infraestructura. |
-| **`code_reviewer/ports`** | Define los contratos de entrada (Driving) y salida (Driven) del sistema. |
-| **`code_reviewer/adapters`** | Implementaciones concretas de la infraestructura (Git VCS, Local FileSystem, Carga dinámica de Skills desde el Home del usuario). |
-| **`code_reviewer/agent.py`** | Punto de composición raíz que conecta los adaptadores con el dominio y declara el `root_agent` de ADK. |
-| **`menu.py`** | Interfaz CLI interactiva que orquesta las consultas al agente ADK. |
+The execution flow is coordinated sequentially by a central **`coordinator_agent`** which delegates tasks to the following specialized agents:
+
+```mermaid
+graph TD
+    Start([User Request]) --> Coordinator[Coordinator Agent]
+    Coordinator --> A1[1. Skills Explorer]
+    A1 --> A2[2. Change Finder]
+    A2 --> A3[3. Error Analyzer]
+    A3 --> A4[4. Refactoring Advisor]
+    A4 --> Coordinator
+    Coordinator -->|User Approval| A5[5. Change Applier]
+    A5 --> A6[6. Test Executor]
+    A6 --> End([Result Summary])
+```
+
+1. **`skills_explorer`**: Reads and indexes global and local design guidelines (`read_project_skills`).
+2. **`change_finder`**: Detects git status/diff and reads source code files (`get_git_changes`, `read_source_file`).
+3. **`error_analyzer`**: Compares files against design guidelines to identify syntax bugs, logic errors, and structural deviations.
+4. **`refactoring_advisor`**: Generates a refactoring proposal. If the changes are extensive (exceeding 50 lines of code or spanning multiple files), it designs a step-by-step **Incremental Refactoring Plan** so modifications can be verified incrementally.
+5. **`change_applier`**: Modifies files on the filesystem (`write_source_file`) following the proposal or step-by-step incremental plan.
+6. **`test_executor`**: Executes the test suite via the test runner adapter (`execute_unit_tests`) to verify correctness after changes.
 
 ---
 
-## Checklist de Verificación
+## Architectural Layout
 
-- [ ] Las pruebas unitarias pasan con éxito en el entorno local (`5/5 passed`).
-- [ ] El archivo `code_reviewer/.env` contiene una clave API de Gemini válida.
-- [ ] El comando `python3 menu.py` levanta el menú sin errores de importación de módulos.
-- [ ] El agente lee dinámicamente las directivas de diseño en `~/.gemini/config/skills/`.
+The project uses **Hexagonal Architecture** to decouple the core logic from external dependencies (I/O, VCS, shell executions):
+
+| Component | Directory | Description |
+|-----------|-----------|-------------|
+| **Domain** | [`code_reviewer/domain/`](file:///Users/jhanncarlos/Documents/App/My%20Apps/code_reviewer/code_reviewer/domain) | Contains `CodeReviewToolsService` implementing pure domain use cases without system references. |
+| **Ports** | [`code_reviewer/ports/`](file:///Users/jhanncarlos/Documents/App/My%20Apps/code_reviewer/code_reviewer/ports) | Defines secondary ports (`driven.py`, `test_runner.py`) and primary ports (`driving.py`). |
+| **Adapters (Driven)** | [`code_reviewer/adapters/driven/`](file:///Users/jhanncarlos/Documents/App/My%20Apps/code_reviewer/code_reviewer/adapters/driven) | Concrete implementations for infrastructure (Git VCS, Pytest subprocess executing, OS FileSystem, and dynamic skills path expansion relative to the home directory). |
+| **Adapters (Driving)** | [`code_reviewer/adapters/driving/`](file:///Users/jhanncarlos/Documents/App/My%20Apps/code_reviewer/code_reviewer/adapters/driving) | Facade wrapping tool executions with schemas matching ADK requirements (`tool_facade.py`). |
+| **Composition Root** | [`code_reviewer/agent.py`](file:///Users/jhanncarlos/Documents/App/My%20Apps/code_reviewer/code_reviewer/agent.py) | Wire-up entrypoint connecting ports, adapters, and instantiating the specialized agents and coordinator loop. |
 
 ---
 
-## Next step
+## Verification Checklist
 
-Para agregar nuevas directivas de diseño que el agente deba hacer cumplir, simplemente crea archivos de skill (por ejemplo `MI_DIRECTIVA_SKILL.md`) bajo la ruta global `~/.gemini/config/skills/` o dentro de carpetas locales como `.agents/skills/`. El agente las cargará y aplicará de forma automática en su próxima revisión.
+- [ ] Unit tests pass cleanly in local environments (`6/6 passed`).
+- [ ] Staging and environment credentials are separated (secrets ignored via `.gitignore`).
+- [ ] No hardcoded absolute home directories are present.
+- [ ] The CLI starts up without module resolution or path import issues.
+
+---
+
+## Next Steps
+
+To add new design directives for the agents to enforce:
+Create a markdown rules file (e.g., `MY_GUIDELINE_SKILL.md`) inside the global directory `~/.gemini/config/skills/` or a local directory `.agents/skills/`. The `skills_explorer` agent will automatically detect and apply the new guidelines in the next execution turn.
