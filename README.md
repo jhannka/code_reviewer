@@ -109,8 +109,10 @@ When launching the interactive console UI (`npm run menu`), the following option
 * **1. Review Git Changes**: Triggers the `change_finder` agent to scan uncommitted git modifications (via git status & diff), runs the error analysis pipeline, and proposes changes.
 * **2. Review Specific File**: Prompts for a relative file path, reads its source content, and runs the specialized agents sequence on that file.
 * **3. List Project Design Skills**: Indexes and displays a summary of all active global (`~/.gemini/config/skills/`) and project-local (`.agents/skills/`) design guidelines.
-* **4. Configure Settings**: Opens a dynamic configuration dashboard to customize the active LLM model, configure API Keys dynamically, select veracity levels, and toggle CLI languages. Inside the configuration menu, use **`S`** to Save and return, or **`Esc` / `Q`** to Cancel and discard changes.
+* **4. Configure Settings**: Opens a dynamic configuration dashboard to customize the active LLM model (categorized by providers: Google, Anthropic, OpenAI, OpenAI-Compatible), configure API Keys dynamically, select veracity levels, and toggle CLI languages. Inside the configuration menu, use **`S`** to Save and return, or **`Esc` / `Q`** to Cancel and discard changes.
 * **5. Exit**: Safely quits the interactive console session.
+
+*Note: The system features **Robust Session Isolation**. Every review session generates a unique UUID, ensuring that the agents do not inherit stale context or errors from previous runs.*
 
 ---
 
@@ -122,9 +124,10 @@ The code reviewer features full support for multiple AI model providers and prec
 
 | Provider | Models | Extra Requirements |
 |---|---|---|
-| **Google Gemini** | `gemini-2.5-flash` (Default), `gemini-2.5-pro`, `gemini-1.5-flash` (Free developer tier) | None (uses built-in ADK client) |
+| **Google Gemini** | `gemini-3.5-flash` (Default), `gemini-3.5-pro`, `gemini-1.5-flash` | None (uses built-in ADK client) |
 | **Anthropic Claude** | `claude-3-5-sonnet`, `claude-3-5-haiku` | Requires Anthropic packages:<br>`.venv/bin/pip install "google-adk[extensions]"` |
 | **OpenAI / Codex** | `openai/gpt-4o`, `openai/gpt-4o-mini` | Requires LiteLLM packages:<br>`.venv/bin/pip install "google-adk[extensions]"` |
+| **OpenAI-Compatible** | `openai/deepseek-chat`, `openai/moonshot-v1-8k`, etc. | Allows custom `OPENAI_API_BASE` to support free/local models like DeepSeek, Kimi, Llama. |
 
 ### Dynamic API Key Fields
 
@@ -162,7 +165,7 @@ graph TD
 3. **`error_analyzer`**: Compares files against design guidelines to identify syntax bugs, logic errors, and structural deviations.
 4. **`refactoring_advisor`**: Generates a refactoring proposal. If the changes are extensive (exceeding 50 lines of code or spanning multiple files), it designs a step-by-step **Incremental Refactoring Plan** so modifications can be verified incrementally.
 5. **`change_applier`**: Modifies files on the filesystem (`write_source_file`) following the proposal or step-by-step incremental plan.
-6. **`test_executor`**: Executes the test suite via the test runner adapter (`execute_unit_tests`) to verify correctness after changes.
+6. **`test_executor`**: Executes the test suite via the **Smart Test Runner adapter** (`execute_unit_tests`). This framework-agnostic runner auto-detects your project environment (e.g. Laravel `artisan`, PHPUnit, Jest, Pytest, Go, Maven) based on filesystem signatures, requiring zero manual configuration.
 
 ---
 

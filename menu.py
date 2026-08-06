@@ -69,12 +69,13 @@ LOCALES = {
         "exec_err": "\n❌ Error al ejecutar el agente: {}",
         "adk_missing": "\n❌ Error: No se encontró el ejecutable de ADK en el entorno virtual.\nAsegurate de haber creado el entorno virtual '.venv' e instalado los paquetes.",
         
-        "config_opt_key": "Clave API Google: {}",
-        "config_opt_anthropic_key": "Clave API Anthropic: {}",
-        "config_opt_openai_key": "Clave API OpenAI: {}",
+        "config_opt_key": "Clave API Google",
+        "config_opt_anthropic_key": "Clave API Anthropic",
+        "config_opt_openai_key": "Clave API OpenAI",
         "config_opt_model": "Modelo: {}",
         "config_opt_veracity": "Nivel de Veracidad: {}",
         "config_opt_lang": "Idioma: {}",
+        "config_api_keys_title": "Configurar API Keys (Tokens)",
         
         "model_menu_title": "SELECCIONAR MODELO",
         "model_custom": "Ingresar modelo personalizado...",
@@ -138,12 +139,13 @@ LOCALES = {
         "exec_err": "\n❌ Error running the agent: {}",
         "adk_missing": "\n❌ Error: ADK executable not found in virtual environment.\nMake sure you created the '.venv' directory and installed packages.",
         
-        "config_opt_key": "Google API Key: {}",
-        "config_opt_anthropic_key": "Anthropic API Key: {}",
-        "config_opt_openai_key": "OpenAI API Key: {}",
+        "config_opt_key": "Google API Key",
+        "config_opt_anthropic_key": "Anthropic API Key",
+        "config_opt_openai_key": "OpenAI API Key",
         "config_opt_model": "Model: {}",
         "config_opt_veracity": "Veracity Level: {}",
         "config_opt_lang": "Language: {}",
+        "config_api_keys_title": "Configure API Keys (Tokens)",
         
         "model_menu_title": "SELECT MODEL",
         "model_custom": "Enter custom model ID...",
@@ -528,23 +530,9 @@ def configure_settings_interactive():
     
     selected_index = 0
     while True:
-        # Ofuscar claves para mostrarlas en el menú
-        ofuscated_google = temp_key[:4] + "..." + temp_key[-4:] if len(temp_key) > 8 else (t("not_configured") if not temp_key else "Configured")
-        ofuscated_anthropic = temp_anthropic_key[:4] + "..." + temp_anthropic_key[-4:] if len(temp_anthropic_key) > 8 else (t("not_configured") if not temp_anthropic_key else "Configured")
-        ofuscated_openai = temp_openai_key[:4] + "..." + temp_openai_key[-4:] if len(temp_openai_key) > 8 else (t("not_configured") if not temp_openai_key else "Configured")
-        
-        # Construir dinámicamente los ítems del menú de acuerdo al modelo
         items = []
-        items.append((f"{t('config_opt_key', ofuscated_google)}", "google_key"))
+        items.append((t('config_api_keys_title'), "api_keys"))
         
-        # Claude (Anthropic) requiere clave de Anthropic
-        if temp_model.startswith("claude-") or "anthropic" in temp_model:
-            items.append((f"{t('config_opt_anthropic_key', ofuscated_anthropic)}", "anthropic_key"))
-            
-        # OpenAI (GPT) requiere clave de OpenAI
-        if temp_model.startswith("openai/") or "gpt" in temp_model:
-            items.append((f"{t('config_opt_openai_key', ofuscated_openai)}", "openai_key"))
-            
         display_lang = "Español" if temp_lang == "es" else "English"
         
         items.append((f"{t('config_opt_model', temp_model)}", "model"))
@@ -597,47 +585,87 @@ def configure_settings_interactive():
         else:
             continue
             
-        if tag == "google_key":
-            clear_screen()
-            print(f"{CYAN}--- {t('config_opt_key', '')} ---{RESET}")
-            new_key = input(t("config_key_prompt")).strip()
-            if new_key:
-                temp_key = new_key
+        if tag == "api_keys":
+            while True:
+                s_google = "Configurado" if temp_key else "No configurado"
+                s_anthropic = "Configurado" if temp_anthropic_key else "No configurado"
+                s_openai = "Configurado" if temp_openai_key else "No configurado"
                 
-        elif tag == "anthropic_key":
-            clear_screen()
-            print(f"{CYAN}--- {t('config_opt_anthropic_key', '')} ---{RESET}")
-            new_key = input(t("config_key_prompt")).strip()
-            if new_key:
-                temp_anthropic_key = new_key
-                
-        elif tag == "openai_key":
-            clear_screen()
-            print(f"{CYAN}--- {t('config_opt_openai_key', '')} ---{RESET}")
-            new_key = input(t("config_key_prompt")).strip()
-            if new_key:
-                temp_openai_key = new_key
+                key_opts = [
+                    f"Google (Gemini) - {s_google}",
+                    f"Anthropic (Claude) - {s_anthropic}",
+                    f"OpenAI (GPT/DeepSeek) - {s_openai}",
+                    t("back")
+                ]
+                idx_key = select_from_menu(t("config_api_keys_title"), key_opts)
+                if idx_key == 3:
+                    break
+                elif idx_key == 0:
+                    clear_screen()
+                    print(f"{CYAN}--- {t('config_opt_key')} ---{RESET}")
+                    new_key = input(t("config_key_prompt")).strip()
+                    if new_key: temp_key = new_key
+                elif idx_key == 1:
+                    clear_screen()
+                    print(f"{CYAN}--- {t('config_opt_anthropic_key')} ---{RESET}")
+                    new_key = input(t("config_key_prompt")).strip()
+                    if new_key: temp_anthropic_key = new_key
+                elif idx_key == 2:
+                    clear_screen()
+                    print(f"{CYAN}--- {t('config_opt_openai_key')} ---{RESET}")
+                    new_key = input(t("config_key_prompt")).strip()
+                    if new_key: temp_openai_key = new_key
                 
         elif tag == "model":
-            model_options = [
-                "gemini-2.5-flash",
-                "gemini-2.5-pro",
-                "gemini-1.5-flash",
-                "claude-3-5-sonnet",
-                "claude-3-5-haiku",
-                "openai/gpt-4o",
-                "openai/gpt-4o-mini",
-                t("model_custom"),
-                t("back")
-            ]
-            idx_model = select_from_menu(t("model_menu_title"), model_options)
-            if idx_model >= 0 and idx_model < 7:
-                temp_model = model_options[idx_model]
-            elif idx_model == 7:
-                clear_screen()
-                custom = input(t("custom_model_prompt")).strip()
-                if custom:
-                    temp_model = custom
+            while True:
+                provider_options = [
+                    "Google (Gemini)",
+                    "Anthropic (Claude)",
+                    "OpenAI (GPT)",
+                    "OpenAI-Compatible (DeepSeek, Kimi...)",
+                    t("model_custom"),
+                    t("back")
+                ]
+                idx_prov = select_from_menu(t("model_menu_title"), provider_options)
+                
+                if idx_prov == 5:  # t("back")
+                    break
+                    
+                if idx_prov == 0:
+                    opts = ["gemini-3.5-flash", "gemini-3.5-pro", "gemini-3.0-flash", t("back")]
+                    idx_m = select_from_menu("Google (Gemini)", opts)
+                    if idx_m >= 0 and idx_m < len(opts) - 1:
+                        temp_model = opts[idx_m]
+                        break
+                elif idx_prov == 1:
+                    opts = ["claude-3-5-sonnet", "claude-3-5-haiku", "claude-3-opus", t("back")]
+                    idx_m = select_from_menu("Anthropic (Claude)", opts)
+                    if idx_m >= 0 and idx_m < len(opts) - 1:
+                        temp_model = opts[idx_m]
+                        break
+                elif idx_prov == 2:
+                    opts = ["openai/gpt-4o", "openai/gpt-4o-mini", "openai/o1-mini", t("back")]
+                    idx_m = select_from_menu("OpenAI (GPT)", opts)
+                    if idx_m >= 0 and idx_m < len(opts) - 1:
+                        temp_model = opts[idx_m]
+                        vars["OPENAI_API_BASE"] = ""  # Limpiar URL base para OpenAI oficial
+                        break
+                elif idx_prov == 3:
+                    clear_screen()
+                    print(f"{CYAN}--- Configurar Modelo Compatible con OpenAI ---{RESET}")
+                    custom = input("Ingresa el identificador (ej: openai/deepseek-chat): ").strip()
+                    if custom:
+                        if not custom.startswith("openai/"): custom = f"openai/{custom}"
+                        base_url = input("Ingresa el Base URL (ej: https://api.deepseek.com/v1): ").strip()
+                        temp_model = custom
+                        if base_url: vars["OPENAI_API_BASE"] = base_url
+                        break
+                elif idx_prov == 4:
+                    clear_screen()
+                    custom = input(t("custom_model_prompt")).strip()
+                    if custom:
+                        temp_model = custom
+                        break
                     
         elif tag == "veracity":
             veracity_options = [
@@ -672,20 +700,12 @@ def configure_settings_interactive():
 def configure_settings_non_interactive():
     """Configuración secuencial fallback para entornos no-interactivos."""
     vars = load_env_vars()
-    current_key = vars.get("GOOGLE_API_KEY", "")
-    current_anthropic = vars.get("ANTHROPIC_API_KEY", "")
-    current_openai = vars.get("OPENAI_API_KEY", "")
     current_model = vars.get("GEMINI_MODEL", "gemini-2.5-flash")
     current_lang = vars.get("CLI_LANG", "es").strip().lower()
     current_veracity = vars.get("REVIEW_VERACITY", "strict").strip().lower()
     
-    if current_key and current_key != "placeholder_key":
-        display_key = current_key[:4] + "..." + current_key[-4:] if len(current_key) > 8 else "Configured"
-    else:
-        display_key = t("not_configured") + " (placeholder)"
-        
+    print(f"{CYAN}{t('config_title')}{RESET}")
     print(t("config_status"))
-    print(t("config_key", display_key))
     print(t("config_model", current_model))
     print(t("config_lang", "Español" if current_lang == "es" else "English"))
     print(t("config_opt_veracity", current_veracity))
@@ -696,22 +716,35 @@ def configure_settings_non_interactive():
         vars["GOOGLE_API_KEY"] = new_key
         
     print(t("config_model_title"))
-    print("1. gemini-2.5-flash\n2. gemini-2.5-pro\n3. gemini-1.5-flash\n4. claude-3-5-sonnet\n5. openai/gpt-4o\n6. Custom")
-    sel = input(t("config_model_prompt")).strip()
-    if sel == "1":
-        vars["GEMINI_MODEL"] = "gemini-2.5-flash"
-    elif sel == "2":
-        vars["GEMINI_MODEL"] = "gemini-2.5-pro"
-    elif sel == "3":
-        vars["GEMINI_MODEL"] = "gemini-1.5-flash"
-    elif sel == "4":
-        vars["GEMINI_MODEL"] = "claude-3-5-sonnet"
-    elif sel == "5":
-        vars["GEMINI_MODEL"] = "openai/gpt-4o"
-    elif sel == "6":
-        custom = input("Enter model ID: ").strip()
+    print("1. Google (Gemini)\n2. Anthropic (Claude)\n3. OpenAI (GPT)\n4. OpenAI-Compatible (DeepSeek, Kimi...)\n5. Custom")
+    sel_prov = input("Select provider [1-5]: ").strip()
+    if sel_prov == "1":
+        print("1. gemini-3.5-flash\n2. gemini-3.5-pro\n3. gemini-3.0-flash")
+        sel_m = input("Select model [1-3]: ").strip()
+        models = {"1": "gemini-3.5-flash", "2": "gemini-3.5-pro", "3": "gemini-3.0-flash"}
+        if sel_m in models: vars["GEMINI_MODEL"] = models[sel_m]
+    elif sel_prov == "2":
+        print("1. claude-3-5-sonnet\n2. claude-3-5-haiku\n3. claude-3-opus")
+        sel_m = input("Select model [1-3]: ").strip()
+        models = {"1": "claude-3-5-sonnet", "2": "claude-3-5-haiku", "3": "claude-3-opus"}
+        if sel_m in models: vars["GEMINI_MODEL"] = models[sel_m]
+    elif sel_prov == "3":
+        print("1. openai/gpt-4o\n2. openai/gpt-4o-mini\n3. openai/o1-mini")
+        sel_m = input("Select model [1-3]: ").strip()
+        models = {"1": "openai/gpt-4o", "2": "openai/gpt-4o-mini", "3": "openai/o1-mini"}
+        if sel_m in models: 
+            vars["GEMINI_MODEL"] = models[sel_m]
+            vars["OPENAI_API_BASE"] = ""
+    elif sel_prov == "4":
+        custom = input("Enter identifier (eg: openai/deepseek-chat): ").strip()
         if custom:
+            if not custom.startswith("openai/"): custom = f"openai/{custom}"
+            base_url = input("Enter Base URL (eg: https://api.deepseek.com/v1): ").strip()
             vars["GEMINI_MODEL"] = custom
+            if base_url: vars["OPENAI_API_BASE"] = base_url
+    elif sel_prov == "5":
+        custom = input("Enter model ID: ").strip()
+        if custom: vars["GEMINI_MODEL"] = custom
             
     # Si requiere otras llaves, solicitarlas
     target_model = vars.get("GEMINI_MODEL", current_model)
@@ -720,7 +753,7 @@ def configure_settings_non_interactive():
         if a_key:
             vars["ANTHROPIC_API_KEY"] = a_key
     if target_model.startswith("openai/") or "gpt" in target_model:
-        o_key = input("Enter OpenAI API Key: ").strip()
+        o_key = input("Enter OpenAI / Compatible API Key: ").strip()
         if o_key:
             vars["OPENAI_API_KEY"] = o_key
             
