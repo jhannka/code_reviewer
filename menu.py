@@ -458,60 +458,6 @@ def run_agent_query(query: str):
     except Exception as e:
         print(t("exec_err", str(e)))
 
-def execute_option(choice: int):
-    """Ejecuta la acción asociada al número de opción elegido."""
-    if choice == 1:
-        clear_screen()
-        print(f"{CYAN}{t('git_title')}{RESET}")
-        run_agent_query(t("git_query"))
-        input(t("press_enter"))
-        
-    elif choice == 2:
-        clear_screen()
-        print(f"{CYAN}{t('file_title')}{RESET}")
-        file_path = input(t("file_prompt")).strip()
-        if not file_path:
-            print(t("file_empty"))
-            input(t("press_enter"))
-            return
-            
-        if not os.path.exists(file_path):
-            print(f"Buscando '{file_path}' en los archivos locales...")
-            found = []
-            for root, dirs, files in os.walk("."):
-                dirs[:] = [d for d in dirs if d not in [".git", "node_modules", ".venv", "__pycache__", "vendor"]]
-                for f in files:
-                    if f.endswith((".py", ".js", ".ts", ".php", ".java", ".cs", ".go", ".rb", ".json", ".md")):
-                        p = os.path.join(root, f)
-                        try:
-                            with open(p, "r", encoding="utf-8") as fp:
-                                if file_path in fp.read():
-                                    found.append(p)
-                        except:
-                            pass
-            if not found:
-                print(t("file_not_exist", file_path))
-                input(t("press_enter"))
-                return
-            elif len(found) > 1:
-                idx = select_from_menu(f"Múltiples coincidencias para '{file_path}':", found)
-                if idx >= 0:
-                    file_path = found[idx]
-                else:
-                    return
-            else:
-                file_path = found[0]
-                print(f"Encontrado en: {file_path}")
-            
-        run_agent_query(t("file_query", file_path))
-        input(t("press_enter"))
-        
-    elif choice == 3:
-        clear_screen()
-        print(f"{CYAN}{t('skills_title')}{RESET}")
-        run_agent_query(t("skills_query"))
-        input(t("press_enter"))
-        
     elif choice == 4:
         configure_settings()
         
@@ -632,7 +578,7 @@ def configure_settings_interactive():
                     break
                     
                 if idx_prov == 0:
-                    opts = ["gemini-3.5-flash", "gemini-3.5-pro", "gemini-3.0-flash", t("back")]
+                    opts = ["gemini-3.6-flash", "gemini-3.5-flash", "gemini-3.5-flash-lite", "gemini-2.5-flash", "gemini-2.5-pro", t("back")]
                     idx_m = select_from_menu("Google (Gemini)", opts)
                     if idx_m >= 0 and idx_m < len(opts) - 1:
                         temp_model = opts[idx_m]
@@ -719,9 +665,9 @@ def configure_settings_non_interactive():
     print("1. Google (Gemini)\n2. Anthropic (Claude)\n3. OpenAI (GPT)\n4. OpenAI-Compatible (DeepSeek, Kimi...)\n5. Custom")
     sel_prov = input("Select provider [1-5]: ").strip()
     if sel_prov == "1":
-        print("1. gemini-3.5-flash\n2. gemini-3.5-pro\n3. gemini-3.0-flash")
-        sel_m = input("Select model [1-3]: ").strip()
-        models = {"1": "gemini-3.5-flash", "2": "gemini-3.5-pro", "3": "gemini-3.0-flash"}
+        print("1. gemini-3.6-flash\n2. gemini-3.5-flash\n3. gemini-3.5-flash-lite\n4. gemini-2.5-flash\n5. gemini-2.5-pro")
+        sel_m = input("Select model [1-5]: ").strip()
+        models = {"1": "gemini-3.6-flash", "2": "gemini-3.5-flash", "3": "gemini-3.5-flash-lite", "4": "gemini-2.5-flash", "5": "gemini-2.5-pro"}
         if sel_m in models: vars["GEMINI_MODEL"] = models[sel_m]
     elif sel_prov == "2":
         print("1. claude-3-5-sonnet\n2. claude-3-5-haiku\n3. claude-3-opus")
@@ -859,6 +805,12 @@ def menu_non_interactive():
 
 def menu():
     load_env_vars()
+    if len(sys.argv) > 1:
+        # Modo headless para invocación directa desde SKILL.md o CLI
+        prompt = " ".join(sys.argv[1:])
+        run_agent_query(prompt)
+        return
+        
     check_for_updates()
     if is_interactive():
         menu_interactive()

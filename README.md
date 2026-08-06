@@ -75,23 +75,22 @@ To run the reviewer agent globally from the root of **any** project on your syst
 
 #### Windows
 
-You can configure the global executable either using PowerShell or the graphical user interface:
+The repository now includes a native `code-reviewer.bat` wrapper script at the root directory.
 
-* **Option A: PowerShell (Recommended)**:
-  Run PowerShell as Administrator and execute the following command to append the `bin/` folder path to your user environment variables:
+* **Option A: Automated Script (Recommended)**:
+  Run the included PowerShell script to safely append the project root to your User PATH:
   ```powershell
-  [Environment]::SetEnvironmentVariable("Path", $env:Path + ";C:\path\to\code_reviewer\bin", "User")
+  powershell -ExecutionPolicy Bypass -File update_path.ps1
   ```
-  *Make sure to replace `C:\path\to\code_reviewer\bin` with the actual absolute path to the project's `bin/` directory on your drive.*
+  *Restart your terminal for changes to take effect.*
 
 * **Option B: Windows Graphical UI**:
   1. Open the **Start Menu**, search for **"Environment Variables"**, and select **"Edit the system environment variables"**.
   2. Click the **"Environment Variables..."** button at the bottom.
   3. Under **"User variables"**, select the **`Path`** variable and click **"Edit..."**.
-  4. Click **"New"** and enter the absolute path to this project's `bin/` folder (e.g., `C:\Users\YourName\Documents\code_reviewer\bin`).
+  4. Click **"New"** and enter the absolute path to this project's root folder (e.g., `C:\Users\YourName\Documents\code_reviewer`).
   5. Click **"OK"** on all windows to apply.
-  6. **Restart your terminal** (Git Bash, Command Prompt, or PowerShell) for the changes to take effect.
-  7. Run:
+  6. **Restart your terminal** and run:
      ```cmd
      code-reviewer
      ```
