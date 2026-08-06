@@ -37,24 +37,64 @@ Before setting up the project, ensure you have **Python 3.10+**, **Node.js 18+**
    PYTHONPATH=.:code_reviewer .venv/bin/pytest
    ```
 
-### Global Installation (Run from anywhere)
+### Global Installation & OS-Specific Setup
 
-To run the reviewer agent from the root of **any** project on your system without navigating back to the code reviewer installation directory:
+To run the reviewer agent globally from the root of **any** project on your system without having to navigate back to the installer directory:
 
-* **macOS & Linux**:
-  Run the automated installation script to create a global symlink in `/usr/local/bin/`:
-  ```bash
-  ./install.sh
+#### macOS
+
+1. **Automated Link**: Run the installation script at the project root to create a symlink in `/usr/local/bin`:
+   ```bash
+   ./install.sh
+   ```
+2. **Path Verification**: Ensure `/usr/local/bin` is in your shell path (default in macOS). Run:
+   ```bash
+   code-reviewer
+   ```
+3. **Alternative Manual Setup**: If you prefer not to use `/usr/local/bin`, add the absolute path of this project's `bin/` directory to your shell configuration (`~/.zshrc` or `~/.bash_profile`):
+   ```bash
+   export PATH="/path/to/code_reviewer/bin:$PATH"
+   ```
+
+#### Linux (Ubuntu/Debian/Fedora)
+
+1. **Automated Link**: Make the install script executable and run it:
+   ```bash
+   chmod +x install.sh
+   ./install.sh
+   ```
+2. **Directory Check**: The script will prompt for your `sudo` password to create the symlink `/usr/local/bin/code-reviewer`. If `/usr/local/bin` is missing on your distribution, create it first:
+   ```bash
+   sudo mkdir -p /usr/local/bin
+   ```
+3. **Alternative Manual Setup**: If you don't have sudo access, append the project `bin/` directory directly to your `~/.bashrc` or `~/.profile`:
+   ```bash
+   echo 'export PATH="/path/to/code_reviewer/bin:$PATH"' >> ~/.bashrc
+   source ~/.bashrc
+   ```
+
+#### Windows
+
+You can configure the global executable either using PowerShell or the graphical user interface:
+
+* **Option A: PowerShell (Recommended)**:
+  Run PowerShell as Administrator and execute the following command to append the `bin/` folder path to your user environment variables:
+  ```powershell
+  [Environment]::SetEnvironmentVariable("Path", $env:Path + ";C:\path\to\code_reviewer\bin", "User")
   ```
-  Now you can run the reviewer globally from any target directory:
-  ```bash
-  code-reviewer
-  ```
-* **Windows**:
-  Add the absolute path of the project's `bin/` directory to your Windows system or user `PATH` environment variable. Once added, you can run the executable globally from any console:
-  ```cmd
-  code-reviewer
-  ```
+  *Make sure to replace `C:\path\to\code_reviewer\bin` with the actual absolute path to the project's `bin/` directory on your drive.*
+
+* **Option B: Windows Graphical UI**:
+  1. Open the **Start Menu**, search for **"Environment Variables"**, and select **"Edit the system environment variables"**.
+  2. Click the **"Environment Variables..."** button at the bottom.
+  3. Under **"User variables"**, select the **`Path`** variable and click **"Edit..."**.
+  4. Click **"New"** and enter the absolute path to this project's `bin/` folder (e.g., `C:\Users\YourName\Documents\code_reviewer\bin`).
+  5. Click **"OK"** on all windows to apply.
+  6. **Restart your terminal** (Git Bash, Command Prompt, or PowerShell) for the changes to take effect.
+  7. Run:
+     ```cmd
+     code-reviewer
+     ```
 
 ---
 
