@@ -6,7 +6,17 @@ A CLI-based code reviewer application built with **Google ADK (Agent Development
 
 ## Quick Path
 
-1. **Install dependencies**:
+### 0. System Dependencies
+
+Before setting up the project, ensure you have **Python 3.10+**, **Node.js 18+**, and **Git** installed on your operating system:
+
+| Platform | Installation Method |
+|----------|---------------------|
+| **macOS** | Install via [Homebrew](https://brew.sh):<br>`brew install python git node` |
+| **Linux (Ubuntu/Debian)** | Install via `apt`:<br>`sudo apt update && sudo apt install -y python3 python3-venv git nodejs npm` |
+| **Windows** | Install via `winget` (or download official installers):<br>`winget install Python.Python.3.11`<br>`winget install Git.Git`<br>`winget install OpenJS.NodeJS` |
+
+### 1. Install dependencies:
    ```bash
    python3 -m venv .venv
    .venv/bin/pip install google-adk python-dotenv pytest
