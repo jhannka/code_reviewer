@@ -2,6 +2,17 @@
 
 All notable changes to this project will be documented in this file.
 
+## [1.1.0] - 2026-08-05
+
+This release introduces a fully interactive, modernized console UI with keyboard navigation, custom ANSI coloring, and multi-language support (English/Spanish).
+
+### Added
+- **Interactive Keyboard Navigation**: Use Up/Down arrows to navigate options, and Enter to select.
+- **Modern ANSI Styling**: Added cyber cyan headers, green cursors, gray shortcuts, and bold layouts.
+- **Multilingual Support (i18n)**: Switch the entire interface dynamically between Spanish and English. Preference is persisted via `CLI_LANG` in `.env`.
+- **Keyboard Shortcuts**: Directly execute options by pressing numbers `1-5`, or press `Esc` / `q` to exit.
+- **Piping Fallback (isatty check)**: Automatically falls back to traditional text input if stdout/stdin are piped, maintaining full test suite compatibility.
+
 ## [1.0.0] - 2026-08-05
 
 This is the first official release of the Multi-Agent Code Reviewer agent, featuring a decoupled Hexagonal Architecture layout and a sequential 6-agent analysis pipeline.
