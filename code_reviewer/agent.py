@@ -7,7 +7,8 @@ from google.genai import types
 from dotenv import load_dotenv
 
 # Cargar variables del .env
-load_dotenv()
+env_path = os.path.join(os.path.dirname(__file__), ".env")
+load_dotenv(env_path)
 
 # Importar capas de arquitectura hexagonal
 from code_reviewer.adapters.driven.git_vcs import GitVCSAdapter
@@ -40,7 +41,7 @@ service = CodeReviewToolsService(
 configure_facade(service)
 
 # Leer modelo de las variables de entorno (por defecto gemini-2.5-flash)
-model_name = os.getenv("GEMINI_MODEL", "gemini-2.5-flash")
+model_name = os.getenv("GEMINI_MODEL", "gemini-3.5-flash")
 
 # Cargar configuración de veracidad y mapear a temperatura de LLM
 veracity = os.getenv("REVIEW_VERACITY", "strict").strip().lower()
@@ -96,51 +97,15 @@ def after_agent(callback_context):
     sys.stdout.flush()
     return None
 
-# --- Definicón de Agentes Especializados ---
+# --- Definición de Agentes Especializados (Pipeline Inverso para permitir transferencias) ---
 
-# 1. Agente Explorador de Skills
-skills_explorer = Agent(
+# 6. Agente Ejecutor de Tests
+test_executor = Agent(
     model=model_name,
-    name='skills_explorer',
-    description='Agente especializado en leer y resumir las directivas y skills de diseño del proyecto.',
-    instruction='Tu única tarea es leer y extraer todas las skills y directivas de diseño del proyecto usando la herramienta "read_project_skills". Entrega un informe consolidado con estas guías.',
-    tools=[read_project_skills],
-    before_agent_callback=before_agent,
-    after_agent_callback=after_agent,
-    generate_content_config=gen_config
-)
-
-# 2. Agente Buscador de Cambios
-change_finder = Agent(
-    model=model_name,
-    name='change_finder',
-    description='Agente especializado en buscar cambios de código pendientes en git o leer archivos específicos.',
-    instruction='Tu única tarea es identificar los cambios pendientes en el repositorio de Git usando "get_git_changes" o leer un archivo de código específico con "read_source_file" si te pasan una ruta. Entrega el código fuente actual o el diff de cambios.',
-    tools=[get_git_changes, read_source_file],
-    before_agent_callback=before_agent,
-    after_agent_callback=after_agent,
-    generate_content_config=gen_config
-)
-
-# 3. Agente Analizador de Errores
-error_analyzer = Agent(
-    model=model_name,
-    name='error_analyzer',
-    description='Agente especializado en identificar discrepancias de codificación y asegurar su veracidad.',
-    instruction='Tu única tarea es analizar el código fuente provisto comparándolo minuciosamente contra las directivas de diseño (skills) obtenidas. Identifica bugs, problemas de legibilidad y desviaciones arquitectónicas. Realiza un chequeo estricto de la veracidad y exactitud técnica de los errores. Entrega un informe de discrepancias detallado.',
-    tools=[read_source_file],
-    before_agent_callback=before_agent,
-    after_agent_callback=after_agent,
-    generate_content_config=gen_config
-)
-
-# 4. Agente Propositor de Refactorización
-refactoring_advisor = Agent(
-    model=model_name,
-    name='refactoring_advisor',
-    description='Agente especializado en diseñar propuestas de refactorización y planes incrementales.',
-    instruction='Tu única tarea es proponer mejoras y refactorizaciones basadas en el reporte de discrepancias. Si los cambios propuestos son extensivos (más de 50 líneas de código en total o afectan a múltiples módulos), debes diseñar obligatoriamente un Plan de Refactorización Incremental paso a paso, de modo que cada paso sea verificable de forma aislada corriendo los tests. Si el cambio es menor, entrega el código corregido directamente.',
-    tools=[read_source_file],
+    name='test_executor',
+    description='Agente especializado en ejecutar pruebas unitarias del proyecto.',
+    instruction='Tu única tarea es ejecutar las pruebas unitarias usando la herramienta "execute_unit_tests" e informar si pasaron o fallaron de manera exacta y concisa. Una vez termines, devuelve el reporte final.',
+    tools=[execute_unit_tests],
     before_agent_callback=before_agent,
     after_agent_callback=after_agent,
     generate_content_config=gen_config
@@ -151,20 +116,61 @@ change_applier = Agent(
     model=model_name,
     name='change_applier',
     description='Agente especializado en aplicar las modificaciones de código aprobadas.',
-    instruction='Tu única tarea es aplicar los cambios de código aprobados usando "write_source_file". Si existe un Plan de Refactorización Incremental provisto por el refactoring_advisor, debes aplicar las correcciones paso a paso, deteniéndose en cada paso para que el test_executor valide el cambio antes de continuar.',
+    instruction='Tu única tarea es aplicar los cambios de código aprobados usando "write_source_file". Si existe un Plan de Refactorización Incremental provisto por el refactoring_advisor, debes aplicar las correcciones paso a paso, deteniéndose en cada paso para que el test_executor valide el cambio antes de continuar. Al finalizar tus cambios, transfiere obligatoriamente el control al "test_executor".',
     tools=[write_source_file],
+    sub_agents=[test_executor],
     before_agent_callback=before_agent,
     after_agent_callback=after_agent,
     generate_content_config=gen_config
 )
 
-# 6. Agente Ejecutor de Tests
-test_executor = Agent(
+# 4. Agente Propositor de Refactorización
+refactoring_advisor = Agent(
     model=model_name,
-    name='test_executor',
-    description='Agente especializado en ejecutar pruebas unitarias del proyecto.',
-    instruction='Tu única tarea es ejecutar las pruebas unitarias usando la herramienta "execute_unit_tests" e informar si pasaron o fallaron de manera exacta y concisa.',
-    tools=[execute_unit_tests],
+    name='refactoring_advisor',
+    description='Agente especializado en diseñar propuestas de refactorización y planes incrementales.',
+    instruction='Tu única tarea es proponer mejoras y refactorizaciones basadas en el reporte de discrepancias. Si los cambios propuestos son extensivos (más de 50 líneas de código en total o afectan a múltiples módulos), debes diseñar obligatoriamente un Plan de Refactorización Incremental paso a paso. Si el cambio es menor, entrega el código corregido directamente. IMPORTANTÍSIMO: Muestra la propuesta final al usuario y ESPERA SU CONFIRMACIÓN antes de usar tu herramienta para transferir el control a "change_applier".',
+    tools=[read_source_file],
+    sub_agents=[change_applier],
+    before_agent_callback=before_agent,
+    after_agent_callback=after_agent,
+    generate_content_config=gen_config
+)
+
+# 3. Agente Analizador de Errores
+error_analyzer = Agent(
+    model=model_name,
+    name='error_analyzer',
+    description='Agente especializado en identificar discrepancias de codificación y asegurar su veracidad.',
+    instruction='Tu única tarea es analizar el código fuente provisto comparándolo minuciosamente contra las directivas de diseño (skills) obtenidas. Identifica bugs, problemas de legibilidad y desviaciones arquitectónicas. Realiza un chequeo estricto de la veracidad y exactitud técnica de los errores. Entrega un informe de discrepancias detallado y AL TERMINAR TRANSFIERE INMEDIATAMENTE EL CONTROL AL AGENTE "refactoring_advisor" pasándole tu reporte.',
+    tools=[read_source_file],
+    sub_agents=[refactoring_advisor],
+    before_agent_callback=before_agent,
+    after_agent_callback=after_agent,
+    generate_content_config=gen_config
+)
+
+# 2. Agente Buscador de Cambios
+change_finder = Agent(
+    model=model_name,
+    name='change_finder',
+    description='Agente especializado en buscar cambios de código pendientes en git o leer archivos específicos.',
+    instruction='Tu única tarea es identificar los cambios pendientes en el repositorio de Git usando "get_git_changes" o leer un archivo de código específico con "read_source_file" si te pasan una ruta. Entrega el código fuente actual o el diff de cambios. AL TERMINAR, DEBES TRANSFERIR INMEDIATAMENTE EL CONTROL AL AGENTE "error_analyzer" pasándole los cambios que encontraste y el resumen de skills.',
+    tools=[get_git_changes, read_source_file],
+    sub_agents=[error_analyzer],
+    before_agent_callback=before_agent,
+    after_agent_callback=after_agent,
+    generate_content_config=gen_config
+)
+
+# 1. Agente Explorador de Skills
+skills_explorer = Agent(
+    model=model_name,
+    name='skills_explorer',
+    description='Agente especializado en leer y resumir las directivas y skills de diseño del proyecto.',
+    instruction='Tu única tarea es leer y extraer todas las skills y directivas de diseño del proyecto usando la herramienta "read_project_skills". Entrega un informe consolidado con estas guías. AL TERMINAR, DEBES TRANSFERIR INMEDIATAMENTE EL CONTROL AL AGENTE "change_finder" para que proceda con su tarea.',
+    tools=[read_project_skills],
+    sub_agents=[change_finder],
     before_agent_callback=before_agent,
     after_agent_callback=after_agent,
     generate_content_config=gen_config
@@ -172,20 +178,8 @@ test_executor = Agent(
 
 # Agente Coordinador Central (Root Agent)
 coordinator_instruction = """
-Eres el Agente Coordinador del proceso de revisión de código. Tu misión es guiar la revisión secuencialmente, asegurando que se cumplan las tareas al 100% sin olvidar nada.
-Debes delegar las tareas a los siguientes sub-agentes en este orden exacto:
-
-1. 'skills_explorer': Para leer las directivas (skills) del proyecto.
-2. 'change_finder': Para obtener los cambios de Git o leer archivos específicos.
-3. 'error_analyzer': Para identificar desviaciones y errores técnicos con veracidad.
-4. 'refactoring_advisor': Para generar la propuesta de refactorización y el plan incremental si los cambios son extensos (>50 líneas).
-5. 'change_applier': Para escribir las modificaciones aprobadas.
-6. 'test_executor': Para ejecutar la suite de pruebas unitarias.
-
-Reglas del Proceso:
-- Ejecuta los agentes estrictamente del 1 al 6. No te saltees pasos ni asumas resultados.
-- Después de la propuesta de 'refactoring_advisor', detente para presentar el informe de discrepancias y la propuesta al usuario, y pídele confirmación antes de delegar a 'change_applier'.
-- Comunicate siempre en español neutro o argentino/rioplatense natural. Sé directo y riguroso.
+Eres el Agente Coordinador del proceso de revisión de código. Tu única misión es INICIAR el flujo de revisión transfiriendo inmediatamente el control al agente 'skills_explorer' pasándole la petición del usuario.
+El flujo continuará secuencialmente entre ellos. NO HAGAS NADA MÁS QUE INVOCAR AL PRIMER AGENTE.
 """
 
 root_agent = Agent(
@@ -194,12 +188,7 @@ root_agent = Agent(
     description='Agente Coordinador que orquesta el proceso de revisión de código secuencial usando sub-agentes.',
     instruction=coordinator_instruction,
     sub_agents=[
-        skills_explorer,
-        change_finder,
-        error_analyzer,
-        refactoring_advisor,
-        change_applier,
-        test_executor
+        skills_explorer
     ],
     generate_content_config=gen_config
 )

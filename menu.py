@@ -1,6 +1,7 @@
 import os
 import sys
 import subprocess
+import tempfile
 
 # Obtener el directorio de instalación absoluto de este script
 INSTALL_DIR = os.path.dirname(os.path.abspath(__file__))
@@ -44,12 +45,12 @@ LOCALES = {
         "press_enter": "\nPresioná Enter para volver al menú...",
         "press_enter_continue": "\nPresioná Enter para continuar...",
         "git_title": "--- REVISANDO CAMBIOS PENDIENTES DE GIT ---",
-        "git_query": "Analizá todos los cambios pendientes de commit (git diff) usando 'get_git_changes'. Revisalos según las skills del proyecto y mostrá el informe.",
+        "git_query": "Inicia el flujo de revisión secuencial para analizar todos los cambios pendientes (git diff). Ejecuta obligatoriamente los agentes del 1 al 4 y presentá el informe de discrepancias y refactorización.",
         "file_title": "--- REVISAR ARCHIVO ESPECÍFICO ---",
-        "file_prompt": "Ingresá la ruta del archivo a revisar: ",
+        "file_prompt": "Ingresá la ruta del archivo, o el nombre de una clase/método a buscar: ",
         "file_empty": "Ruta vacía. Cancelando operación.",
         "file_not_exist": "\n❌ El archivo '{}' no existe en el disco.",
-        "file_query": "Leé y analizá el archivo '{}' usando 'read_source_file'. Revisalo minuciosamente de acuerdo a las skills del proyecto y presentá el informe.",
+        "file_query": "Inicia el flujo de revisión secuencial para analizar el archivo '{}'. Ejecuta obligatoriamente los agentes del 1 al 4 y presentá el informe de discrepancias y refactorización.",
         "skills_title": "--- ANALIZAR Y LISTAR SKILLS ---",
         "skills_query": "Leé todas las skills del proyecto usando 'read_project_skills', listalas y generá un breve resumen explicativo de cada una.",
         "config_title": "--- CONFIGURAR CONFIGURACIÓN ---",
@@ -87,7 +88,9 @@ LOCALES = {
         "veracity_balanced": "Balanceado",
         "veracity_desc_balanced": "Temp: 0.4 - Recomendaciones y explicaciones moderadas",
         "veracity_creative": "Creativo",
-        "veracity_desc_creative": "Temp: 0.7 - Alternativas y lluvia de ideas de refactorización"
+        "veracity_desc_creative": "Temp: 0.7 - Alternativas y lluvia de ideas de refactorización",
+        "api_503": "\n❌ Error: Los servidores del modelo de IA están saturados (503 UNAVAILABLE). Espera un momento y vuelve a intentarlo, o cambia de modelo en Configuración.",
+        "api_invalid": "\n❌ Error: La clave de API configurada es inválida o expiró. Por favor revisa la Configuración del menú."
     },
     "en": {
         "title": "ARCHITECT AGENT - CODE REVIEW MENU",
@@ -111,12 +114,12 @@ LOCALES = {
         "press_enter": "\nPress Enter to return to the menu...",
         "press_enter_continue": "\nPress Enter to continue...",
         "git_title": "--- REVIEWING UNCOMMITTED GIT CHANGES ---",
-        "git_query": "Review all uncommitted git diff modifications using 'get_git_changes'. Validate them against project design skills and show the report.",
+        "git_query": "Start the sequential review flow to analyze all uncommitted changes. You must execute agents 1 through 4 and present the discrepancies and refactoring report.",
         "file_title": "--- REVIEW SPECIFIC FILE ---",
-        "file_prompt": "Enter the relative path of the file to review: ",
+        "file_prompt": "Enter the relative path, or a class/method name to search: ",
         "file_empty": "Empty path. Canceling operation.",
         "file_not_exist": "\n❌ The file '{}' does not exist on disk.",
-        "file_query": "Read and analyze the file '{}' using 'read_source_file'. Review it thoroughly based on project skills and present the report.",
+        "file_query": "Start the sequential review flow to analyze the file '{}'. You must execute agents 1 through 4 and present the discrepancies and refactoring report.",
         "skills_title": "--- ANALYZING AND LISTING GUIDELINES ---",
         "skills_query": "Read all project design skills using 'read_project_skills', list them, and generate a brief summary of each.",
         "config_title": "--- CONFIGURE CONFIGURATION ---",
@@ -154,7 +157,9 @@ LOCALES = {
         "veracity_balanced": "Balanced",
         "veracity_desc_balanced": "Temp: 0.4 - Moderate recommendations and explanations",
         "veracity_creative": "Creative",
-        "veracity_desc_creative": "Temp: 0.7 - Creative alternatives and refactoring ideas"
+        "veracity_desc_creative": "Temp: 0.7 - Alternatives and refactoring brainstorming",
+        "api_503": "\n❌ Error: The AI model servers are overloaded (503 UNAVAILABLE). Please wait a moment and try again, or switch models in Settings.",
+        "api_invalid": "\n❌ Error: The configured API key is invalid or expired. Please check Settings in the menu."
     }
 }
 
@@ -385,17 +390,67 @@ def run_agent_query(query: str):
     if not os.path.exists(adk_path):
         adk_path = os.path.join(INSTALL_DIR, ".venv", "Scripts", "adk")
         if not os.path.exists(adk_path):
-            print(t("adk_missing"))
-            return
+            adk_path = os.path.join(INSTALL_DIR, ".venv", "Scripts", "adk.exe")
+            if not os.path.exists(adk_path):
+                print(t("adk_missing"))
+                return
             
     print(t("running_rev", query))
     try:
         env = os.environ.copy()
+        env["PYTHONWARNINGS"] = "ignore"
         env["PYTHONPATH"] = f"{INSTALL_DIR}:{env.get('PYTHONPATH', '')}"
+        env["PYTHONIOENCODING"] = "utf-8" # Prevenir error de Unicode en el spinner
         
-        result = subprocess.run([adk_path, "run", "code_reviewer", query], env=env)
-        if result.returncode != 0:
-            print(t("agent_err"))
+        agent_dir = os.path.join(INSTALL_DIR, "code_reviewer")
+        import uuid
+        session_id = f"review_{uuid.uuid4().hex[:8]}"
+        session_file = os.path.join(agent_dir, ".adk", "sessions", f"{session_id}.json")
+        
+        def run_step(prompt: str, is_first: bool):
+            cmd = [adk_path, "run", "--log_level", "error"]
+            if not is_first and os.path.exists(session_file):
+                cmd.extend(["--resume", session_file])
+            else:
+                cmd.extend(["--save_session", "--session_id", session_id])
+                
+            cmd.extend([agent_dir, prompt])
+            
+            result = subprocess.run(cmd, env=env)
+            if result.returncode != 0:
+                error_found = False
+                log_path = os.path.join(tempfile.gettempdir(), "agents_log", "agent.latest.log")
+                if os.path.exists(log_path):
+                    try:
+                        with open(log_path, "r", encoding="utf-8", errors="replace") as f:
+                            log_content = f.read()
+                            if "503 UNAVAILABLE" in log_content:
+                                print(t("api_503"))
+                                error_found = True
+                            elif "API_KEY_INVALID" in log_content or "API key not valid" in log_content:
+                                print(t("api_invalid"))
+                                error_found = True
+                    except:
+                        pass
+                if not error_found:
+                    print(t("agent_err"))
+                return False
+            return True
+            
+        # Ejecutar la primera instrucción
+        if not run_step(query, is_first=True):
+            return
+            
+        # Iniciar ciclo interactivo manual (para sortear el single-step de subprocess)
+        while True:
+            user_input = input(f"\n{GREEN}Tú (Enter vacío para salir): {RESET}").strip()
+            if not user_input:
+                break
+            print("\n")
+            if not run_step(user_input, is_first=False):
+                print(f"{YELLOW}⚠️ No se pudo procesar la respuesta. Puedes intentar enviarla nuevamente.{RESET}")
+                continue
+
     except KeyboardInterrupt:
         print(t("rev_canceled"))
     except Exception as e:
@@ -419,9 +474,32 @@ def execute_option(choice: int):
             return
             
         if not os.path.exists(file_path):
-            print(t("file_not_exist", file_path))
-            input(t("press_enter"))
-            return
+            print(f"Buscando '{file_path}' en los archivos locales...")
+            found = []
+            for root, dirs, files in os.walk("."):
+                dirs[:] = [d for d in dirs if d not in [".git", "node_modules", ".venv", "__pycache__", "vendor"]]
+                for f in files:
+                    if f.endswith((".py", ".js", ".ts", ".php", ".java", ".cs", ".go", ".rb", ".json", ".md")):
+                        p = os.path.join(root, f)
+                        try:
+                            with open(p, "r", encoding="utf-8") as fp:
+                                if file_path in fp.read():
+                                    found.append(p)
+                        except:
+                            pass
+            if not found:
+                print(t("file_not_exist", file_path))
+                input(t("press_enter"))
+                return
+            elif len(found) > 1:
+                idx = select_from_menu(f"Múltiples coincidencias para '{file_path}':", found)
+                if idx >= 0:
+                    file_path = found[idx]
+                else:
+                    return
+            else:
+                file_path = found[0]
+                print(f"Encontrado en: {file_path}")
             
         run_agent_query(t("file_query", file_path))
         input(t("press_enter"))

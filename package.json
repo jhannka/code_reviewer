@@ -6,7 +6,7 @@
   "scripts": {
     "test": "PYTHONPATH=.:code_reviewer .venv/bin/pytest",
     "review": ".venv/bin/adk run code_reviewer 'Review the modified but uncommitted Git changes based on the project design skills and provide a discrepancy report.'",
-    "menu": "python3 menu.py"
+    "menu": "python menu.py"
   },
   "keywords": [
     "ai",
