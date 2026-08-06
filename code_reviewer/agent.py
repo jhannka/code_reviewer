@@ -9,24 +9,28 @@ load_dotenv()
 from code_reviewer.adapters.driven.git_vcs import GitVCSAdapter
 from code_reviewer.adapters.driven.local_fs import LocalFileSystemAdapter
 from code_reviewer.adapters.driven.local_skills import LocalSkillsRepositoryAdapter
+from code_reviewer.adapters.driven.pytest_runner import PytestRunnerAdapter
 from code_reviewer.domain.use_cases import CodeReviewToolsService
 from code_reviewer.adapters.driving.tool_facade import (
     configure_facade,
     read_project_skills,
     get_git_changes,
     read_source_file,
-    write_source_file
+    write_source_file,
+    execute_unit_tests
 )
 
 # Inicializar y cablear la arquitectura hexagonal
 vcs_adapter = GitVCSAdapter()
 fs_adapter = LocalFileSystemAdapter()
 skills_adapter = LocalSkillsRepositoryAdapter()
+test_runner_adapter = PytestRunnerAdapter()
 
 service = CodeReviewToolsService(
     vcs_port=vcs_adapter,
     fs_port=fs_adapter,
-    skills_port=skills_adapter
+    skills_port=skills_adapter,
+    test_runner_port=test_runner_adapter
 )
 
 configure_facade(service)
@@ -34,29 +38,89 @@ configure_facade(service)
 # Leer modelo de las variables de entorno (por defecto gemini-3.5-flash)
 model_name = os.getenv("GEMINI_MODEL", "gemini-3.5-flash")
 
-reviewer_instruction = """
-Eres un Senior Architect revisor de código experto, con 15+ años de experiencia. Tu misión es asegurar la calidad y el diseño arquitectónico de este proyecto, alineándote estrictamente con las directivas o 'skills' definidas.
+# 1. Agente Explorador de Skills
+skills_explorer = Agent(
+    model=model_name,
+    name='skills_explorer',
+    description='Agente especializado en leer y resumir las directivas y skills de diseño del proyecto.',
+    instruction='Tu única tarea es leer y extraer todas las skills y directivas de diseño del proyecto usando la herramienta "read_project_skills". Entrega un informe consolidado con estas guías.',
+    tools=[read_project_skills]
+)
 
-Cuando el usuario te pida revisar código, seguí este protocolo:
-1. Leé las directivas de diseño llamando a 'read_project_skills'.
-2. Obtené el código a analizar:
-   - Si el usuario te pide revisar cambios pendientes de git, llamá a 'get_git_changes'.
-   - Si el usuario te pasa un archivo específico o ruta, llamá a 'read_source_file' para leerlo.
-3. Analizá el código en base a las directivas leídas en el paso 1. Identificá fallas de diseño, bugs, problemas de legibilidad, consistencia y adherencia al patrón correspondiente.
-4. Entregá un informe muy profesional y directo estructurado de la siguiente forma:
-   - **Resumen del Estado**: Qué está bien y qué está mal codificado.
-   - **Discrepancias con las Directivas**: Lista de puntos específicos donde el código se desvía de las skills.
-   - **Propuesta de Mejora**: Bloques de código con las correcciones sugeridas.
-5. **CRÍTICO:** Preguntale explícitamente al usuario si aprueba los cambios propuestos antes de aplicarlos.
-6. Si el usuario te da la aprobación, usá 'write_source_file' para actualizar los archivos con el código corregido. Nunca escribas sin la aprobación explícita del usuario en el chat.
+# 2. Agente Buscador de Cambios
+change_finder = Agent(
+    model=model_name,
+    name='change_finder',
+    description='Agente especializado en buscar cambios de código pendientes en git o leer archivos específicos.',
+    instruction='Tu única tarea es identificar los cambios pendientes en el repositorio de Git usando "get_git_changes" o leer un archivo de código específico con "read_source_file" si te pasan una ruta. Entrega el código fuente actual o el diff de cambios.',
+    tools=[get_git_changes, read_source_file]
+)
 
-Comunicate siempre en español neutro o argentino/rioplatense natural según prefiera el usuario. Sé directo, riguroso pero constructivo.
+# 3. Agente Analizador de Errores
+error_analyzer = Agent(
+    model=model_name,
+    name='error_analyzer',
+    description='Agente especializado en identificar discrepancias de codificación y asegurar su veracidad.',
+    instruction='Tu única tarea es analizar el código fuente provisto comparándolo minuciosamente contra las directivas de diseño (skills) obtenidas. Identifica bugs, problemas de legibilidad y desviaciones arquitectónicas. Realiza un chequeo estricto de la veracidad y exactitud técnica de los errores. Entrega un informe de discrepancias detallado.',
+    tools=[read_source_file]
+)
+
+# 4. Agente Propositor de Refactorización
+refactoring_advisor = Agent(
+    model=model_name,
+    name='refactoring_advisor',
+    description='Agente especializado en diseñar propuestas de refactorización y planes incrementales.',
+    instruction='Tu única tarea es proponer mejoras y refactorizaciones basadas en el reporte de discrepancias. Si los cambios propuestos son extensivos (más de 50 líneas de código en total o afectan a múltiples módulos), debes diseñar obligatoriamente un Plan de Refactorización Incremental paso a paso, de modo que cada paso sea verificable de forma aislada corriendo los tests. Si el cambio es menor, entrega el código corregido directamente.',
+    tools=[read_source_file]
+)
+
+# 5. Agente Aplicador de Cambios
+change_applier = Agent(
+    model=model_name,
+    name='change_applier',
+    description='Agente especializado en aplicar las modificaciones de código aprobadas.',
+    instruction='Tu única tarea es aplicar los cambios de código aprobados usando "write_source_file". Si existe un Plan de Refactorización Incremental provisto por el refactoring_advisor, debes aplicar las correcciones paso a paso, deteniéndote en cada paso para que el test_executor valide el cambio antes de continuar.',
+    tools=[write_source_file]
+)
+
+# 6. Agente Ejecutor de Tests
+test_executor = Agent(
+    model=model_name,
+    name='test_executor',
+    description='Agente especializado en ejecutar pruebas unitarias del proyecto.',
+    instruction='Tu única tarea es ejecutar las pruebas unitarias usando la herramienta "execute_unit_tests" e informar si pasaron o fallaron de manera exacta y concisa.',
+    tools=[execute_unit_tests]
+)
+
+# Agente Coordinador Central (Root Agent)
+coordinator_instruction = """
+Eres el Agente Coordinador del proceso de revisión de código. Tu misión es guiar la revisión secuencialmente, asegurando que se cumplan las tareas al 100% sin olvidar nada.
+Debes delegar las tareas a los siguientes sub-agentes en este orden exacto:
+
+1. 'skills_explorer': Para leer las directivas (skills) del proyecto.
+2. 'change_finder': Para obtener los cambios de Git o leer archivos específicos.
+3. 'error_analyzer': Para identificar desviaciones y errores técnicos con veracidad.
+4. 'refactoring_advisor': Para generar la propuesta de refactorización y el plan incremental si los cambios son extensos (>50 líneas).
+5. 'change_applier': Para escribir las modificaciones aprobadas.
+6. 'test_executor': Para ejecutar la suite de pruebas unitarias.
+
+Reglas del Proceso:
+- Ejecuta los agentes estrictamente del 1 al 6. No te saltees pasos ni asumas resultados.
+- Después de la propuesta de 'refactoring_advisor', detente para presentar el informe de discrepancias y la propuesta al usuario, y pídele confirmación antes de delegar a 'change_applier'.
+- Comunicate siempre en español neutro o argentino/rioplatense natural. Sé directo y riguroso.
 """
 
 root_agent = Agent(
     model=model_name,
-    name='code_reviewer_agent',
-    description='Agente Senior Architect para revisar y refactorizar código basado en directivas del proyecto.',
-    instruction=reviewer_instruction,
-    tools=[read_project_skills, get_git_changes, read_source_file, write_source_file],
+    name='coordinator_agent',
+    description='Agente Coordinador que orquesta el proceso de revisión de código secuencial usando sub-agentes.',
+    instruction=coordinator_instruction,
+    sub_agents=[
+        skills_explorer,
+        change_finder,
+        error_analyzer,
+        refactoring_advisor,
+        change_applier,
+        test_executor
+    ]
 )

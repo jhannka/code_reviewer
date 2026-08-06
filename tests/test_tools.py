@@ -3,16 +3,19 @@ import pytest
 from unittest.mock import MagicMock, patch
 
 from code_reviewer.ports.driven import VersionControlSystemPort, FileSystemPort, SkillsRepositoryPort
+from code_reviewer.ports.test_runner import TestRunnerPort
 from code_reviewer.domain.use_cases import CodeReviewToolsService
 from code_reviewer.adapters.driven.local_fs import LocalFileSystemAdapter
 from code_reviewer.adapters.driven.local_skills import LocalSkillsRepositoryAdapter
 from code_reviewer.adapters.driven.git_vcs import GitVCSAdapter
+from code_reviewer.adapters.driven.pytest_runner import PytestRunnerAdapter
 from code_reviewer.adapters.driving.tool_facade import (
     configure_facade,
     read_project_skills,
     get_git_changes,
     read_source_file,
-    write_source_file
+    write_source_file,
+    execute_unit_tests
 )
 
 # ==========================================
@@ -24,13 +27,20 @@ def test_code_review_service_delegates_to_ports():
     vcs_mock = MagicMock(spec=VersionControlSystemPort)
     fs_mock = MagicMock(spec=FileSystemPort)
     skills_mock = MagicMock(spec=SkillsRepositoryPort)
+    test_runner_mock = MagicMock(spec=TestRunnerPort)
     
     vcs_mock.get_git_changes.return_value = "mock git changes"
     fs_mock.read_file.return_value = "mock file content"
     fs_mock.write_file.return_value = "mock write status"
     skills_mock.read_all_skills.return_value = "mock skills content"
+    test_runner_mock.execute_tests.return_value = "mock test results"
     
-    service = CodeReviewToolsService(vcs_port=vcs_mock, fs_port=fs_mock, skills_port=skills_mock)
+    service = CodeReviewToolsService(
+        vcs_port=vcs_mock,
+        fs_port=fs_mock,
+        skills_port=skills_mock,
+        test_runner_port=test_runner_mock
+    )
     
     # Act & Assert
     assert service.get_changes() == "mock git changes"
@@ -44,6 +54,9 @@ def test_code_review_service_delegates_to_ports():
     
     assert service.get_skills() == "mock skills content"
     skills_mock.read_all_skills.assert_called_once()
+
+    assert service.execute_tests() == "mock test results"
+    test_runner_mock.execute_tests.assert_called_once()
 
 
 # ==========================================
@@ -97,6 +110,33 @@ def test_local_skills_adapter_walks_directories(mock_walk, mock_isdir, mock_exis
         assert "SKILL.md" in res
 
 
+@patch("subprocess.run")
+def test_pytest_runner_adapter_success(mock_run):
+    # Arrange
+    mock_response = MagicMock()
+    mock_response.return_valuecode = 0
+    mock_response.returncode = 0
+    mock_response.stdout = "5 passed"
+    mock_response.stderr = ""
+    mock_run.return_value = mock_response
+    
+    adapter = PytestRunnerAdapter()
+    
+    # Act
+    res = adapter.execute_tests()
+    
+    # Assert
+    assert "Status: PASSED" in res
+    assert "5 passed" in res
+    mock_run.assert_called_once_with(
+        [".venv/bin/pytest"],
+        env={"PYTHONPATH": ".:code_reviewer"},
+        capture_output=True,
+        text=True,
+        check=False
+    )
+
+
 # ==========================================
 # Driving Facade Tests
 # ==========================================
@@ -108,6 +148,7 @@ def test_facade_delegates_to_configured_service():
     service_mock.get_changes.return_value = "facade changes"
     service_mock.read_file.return_value = "facade read"
     service_mock.write_file.return_value = "facade write"
+    service_mock.execute_tests.return_value = "facade tests"
     
     configure_facade(service_mock)
     
@@ -116,3 +157,4 @@ def test_facade_delegates_to_configured_service():
     assert get_git_changes("dir") == "facade changes"
     assert read_source_file("path") == "facade read"
     assert write_source_file("path", "content") == "facade write"
+    assert execute_unit_tests() == "facade tests"

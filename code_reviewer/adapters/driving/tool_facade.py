@@ -57,3 +57,13 @@ def write_source_file(file_path: str, content: str) -> str:
     if _service is None:
         raise RuntimeError("Tool facade is not configured. Call configure_facade first.")
     return _service.write_file(file_path, content)
+
+def execute_unit_tests() -> str:
+    """Executes the test suite for the project and returns the output logs and status.
+    
+    Returns:
+        A string containing the status of the test execution (PASSED/FAILED) and stdout/stderr output.
+    """
+    if _service is None:
+        raise RuntimeError("Tool facade is not configured. Call configure_facade first.")
+    return _service.execute_tests()
