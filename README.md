@@ -109,7 +109,8 @@ When launching the interactive console UI (`npm run menu`), the following option
 * **2. Review Specific File**: Prompts for a relative file path, reads its source content, and runs the specialized agents sequence on that file.
 * **3. List Project Design Skills**: Indexes and displays a summary of all active global (`~/.gemini/config/skills/`) and project-local (`.agents/skills/`) design guidelines.
 * **4. Configure Settings**: Opens a dynamic configuration dashboard to customize the active LLM model (categorized by providers: Google, Anthropic, OpenAI, OpenAI-Compatible), configure API Keys dynamically, select veracity levels, and toggle CLI languages. Inside the configuration menu, use **`S`** to Save and return, or **`Esc` / `Q`** to Cancel and discard changes.
-* **5. Exit**: Safely quits the interactive console session.
+* **5. Search and Install Skills (GitHub)**: Automatically detects your project's technology stack (e.g. Node, Python, Go, Java, PHP) and searches the community repository `PatrickJS/awesome-cursorrules` to download and install specialized design rules (`.mdc` or `.cursorrules`) locally to `.agents/skills/`.
+* **6. Exit**: Safely quits the interactive console session.
 
 *Note: The system features **Robust Session Isolation**. Every review session generates a unique UUID, ensuring that the agents do not inherit stale context or errors from previous runs.*
 
@@ -124,8 +125,8 @@ The code reviewer features full support for multiple AI model providers and prec
 | Provider | Models | Extra Requirements |
 |---|---|---|
 | **Google Gemini** | `gemini-3.5-flash` (Default), `gemini-3.5-pro`, `gemini-1.5-flash` | None (uses built-in ADK client) |
-| **Anthropic Claude** | `claude-3-5-sonnet`, `claude-3-5-haiku` | Requires Anthropic packages:<br>`.venv/bin/pip install "google-adk[extensions]"` |
-| **OpenAI / Codex** | `openai/gpt-4o`, `openai/gpt-4o-mini` | Requires LiteLLM packages:<br>`.venv/bin/pip install "google-adk[extensions]"` |
+| **Anthropic Claude** | `claude-3-5-sonnet`, `claude-3-5-haiku` | Requires Anthropic packages:<br>`.venv/bin/pip install "litellm>=1.75.5"` |
+| **OpenAI / Codex** | `openai/gpt-4o`, `openai/gpt-4o-mini` | Requires LiteLLM packages:<br>`.venv/bin/pip install "litellm>=1.75.5"` |
 | **OpenAI-Compatible** | `openai/deepseek-chat`, `openai/moonshot-v1-8k`, etc. | Allows custom `OPENAI_API_BASE` to support free/local models like DeepSeek, Kimi, Llama. |
 
 ### Dynamic API Key Fields
