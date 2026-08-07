@@ -40,7 +40,7 @@ service = CodeReviewToolsService(
 
 configure_facade(service)
 
-# Leer modelo de las variables de entorno (por defecto gemini-2.5-flash)
+# Leer modelo de las variables de entorno (por defecto gemini-3.5-flash)
 model_name = os.getenv("GEMINI_MODEL", "gemini-3.5-flash")
 
 # Cargar configuración de veracidad y mapear a temperatura de LLM

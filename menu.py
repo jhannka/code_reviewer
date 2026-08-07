@@ -29,7 +29,8 @@ LOCALES = {
         "opt_2": "Revisar un archivo de código específico",
         "opt_3": "Analizar y listar las directivas (skills)",
         "opt_4": "Configurar API Key, Modelo e Idioma",
-        "opt_5": "Salir",
+        "opt_5": "Buscar e instalar skills (GitHub)",
+        "opt_6": "Salir",
         "status_bar": "[↑/↓] Navegar  |  [Enter] Seleccionar  |  [Esc/Q] Salir",
         "config_status_bar": "[↑/↓] Navegar  |  [Enter] Editar  |  [S] Guardar  |  [Esc/Q] Cancelar",
         "update_available": "✨ ¡NUEVA ACTUALIZACIÓN DISPONIBLE: v{}! ✨",
@@ -62,7 +63,7 @@ LOCALES = {
         "config_saved": "\n✅ Configuración guardada correctamente.",
         "not_configured": "No configurada",
         "exit_msg": "\n¡Nos vemos! Éxitos en el código.",
-        "invalid_opt": "\nOpción no válida. Por favor ingresá un número de 1 a 5.",
+        "invalid_opt": "\nOpción no válida. Por favor ingresá un número de 1 a 6.",
         "running_rev": "\n🚀 Iniciando revisión: '{}'\n",
         "agent_err": "\n⚠️  El agente terminó con algún error (código de salida diferente de 0).",
         "rev_canceled": "\n\n(Revisión cancelada por el usuario)",
@@ -99,7 +100,8 @@ LOCALES = {
         "opt_2": "Review a specific code file",
         "opt_3": "Analyze and list design guidelines (skills)",
         "opt_4": "Configure API Key, Model & Language",
-        "opt_5": "Exit",
+        "opt_5": "Search and install skills (GitHub)",
+        "opt_6": "Exit",
         "status_bar": "[↑/↓] Navigate  |  [Enter] Select  |  [Esc/Q] Exit",
         "config_status_bar": "[↑/↓] Navigate  |  [Enter] Edit  |  [S] Save  |  [Esc/Q] Cancel",
         "update_available": "✨ NEW UPDATE AVAILABLE: v{}! ✨",
@@ -132,7 +134,7 @@ LOCALES = {
         "config_saved": "\n✅ Configuration saved successfully.",
         "not_configured": "Not configured",
         "exit_msg": "\nGoodbye! Happy coding.",
-        "invalid_opt": "\nInvalid option. Please enter a number between 1 and 5.",
+        "invalid_opt": "\nInvalid option. Please enter a number between 1 and 6.",
         "running_rev": "\n🚀 Starting review: '{}'\n",
         "agent_err": "\n⚠️  The agent exited with an error (exit code not equal to 0).",
         "rev_canceled": "\n\n(Review canceled by user)",
@@ -471,10 +473,468 @@ def run_agent_query(query: str):
     except Exception as e:
         print(t("exec_err", str(e)))
 
+
+def detect_project_technologies() -> list:
+    import os, json
+    techs = set()
+    
+    # Node.js
+    if os.path.exists("package.json"):
+        techs.add("node")
+        try:
+            with open("package.json", "r", encoding="utf-8") as f:
+                data = json.load(f)
+                deps = {**data.get("dependencies", {}), **data.get("devDependencies", {})}
+                for dep in deps:
+                    if "react" in dep: techs.add("react")
+                    if "next" in dep: techs.add("next")
+                    if "nextjs" in dep: techs.add("nextjs")
+                    if "vue" in dep: techs.add("vue")
+                    if "nuxt" in dep: techs.add("nuxt")
+                    if "angular" in dep: techs.add("angular")
+                    if "svelte" in dep: techs.add("svelte")
+                    if "express" in dep: techs.add("express")
+                    if "nestjs" in dep: techs.add("nestjs")
+                    if "tailwindcss" in dep: techs.add("tailwindcss")
+                    if "typescript" in dep: techs.add("typescript")
+        except: pass
+        
+    # Python
+    if os.path.exists("requirements.txt") or os.path.exists("pyproject.toml") or os.path.exists("Pipfile"):
+        techs.add("python")
+        try:
+            if os.path.exists("requirements.txt"):
+                with open("requirements.txt", "r", encoding="utf-8") as f:
+                    reqs = f.read().lower()
+                    if "django" in reqs: techs.add("django")
+                    if "flask" in reqs: techs.add("flask")
+                    if "fastapi" in reqs: techs.add("fastapi")
+        except: pass
+
+    # Go
+    if os.path.exists("go.mod"):
+        techs.add("go")
+        techs.add("golang")
+        
+    # PHP
+    if os.path.exists("composer.json"):
+        techs.add("php")
+        try:
+            with open("composer.json", "r", encoding="utf-8") as f:
+                comp = f.read().lower()
+                if "laravel" in comp: techs.add("laravel")
+                if "symfony" in comp: techs.add("symfony")
+        except: pass
+        
+    # Java / Kotlin
+    if os.path.exists("pom.xml") or os.path.exists("build.gradle") or os.path.exists("build.gradle.kts"):
+        techs.add("java")
+        if os.path.exists("build.gradle.kts"): techs.add("kotlin")
+        
+    # Rust
+    if os.path.exists("Cargo.toml"):
+        techs.add("rust")
+        
+    # Ruby
+    if os.path.exists("Gemfile"):
+        techs.add("ruby")
+        try:
+            with open("Gemfile", "r", encoding="utf-8") as f:
+                if "rails" in f.read().lower(): techs.add("rails")
+        except: pass
+
+    return list(techs)
+
+def search_and_install_skills():
+    """Busca e instala skills desde PatrickJS/awesome-cursorrules."""
+    clear_screen()
+    print(f"{CYAN}--- BUSCAR E INSTALAR SKILLS (GITHUB) ---{RESET}")
+    
+    print("\n🔍 Detectando tecnologías en el proyecto...")
+    techs = detect_project_technologies()
+    
+    if not techs:
+        print("\n⚠️  No se pudo detectar automáticamente el lenguaje o framework del proyecto.")
+        search_terms = input("Ingresá el lenguaje o framework a buscar (ej. react, python): ").strip().lower().split(",")
+        search_terms = [t.strip() for t in search_terms if t.strip()]
+        if not search_terms:
+            print(t("file_empty"))
+            input(t("press_enter_continue"))
+            return
+    else:
+        print(f"✅ Tecnologías detectadas: {', '.join(techs)}")
+        search_terms = techs
+        
+    print("\n📥 Buscando en PatrickJS/awesome-cursorrules...")
+    import urllib.request
+    import urllib.error
+    import json
+    import ssl
+    
+    url = "https://api.github.com/repos/PatrickJS/awesome-cursorrules/contents/rules"
+    req = urllib.request.Request(url, headers={"User-Agent": "code-reviewer-cli"})
+    
+    try:
+        context = ssl._create_unverified_context()
+        with urllib.request.urlopen(req, timeout=10.0, context=context) as response:
+            if response.status == 200:
+                data = json.loads(response.read().decode("utf-8"))
+                
+                # Filtrar resultados
+                results = []
+                seen_names = set()
+                for item in data:
+                    if item["type"] == "dir":
+                        item_name = item["name"].lower()
+                        for term in search_terms:
+                            if term in item_name and item["name"] not in seen_names:
+                                results.append(item)
+                                seen_names.add(item["name"])
+                
+                if not results:
+                    print(f"\n❌ No se encontraron skills para las tecnologías: {', '.join(search_terms)}")
+                    input(t("press_enter_continue"))
+                    return
+                
+                # Mostrar menú
+                options = [item["name"] for item in results] + [t("back")]
+                idx = select_from_menu(f"Resultados para {', '.join(search_terms)}", options)
+                
+                if idx == -1 or idx == len(options) - 1:
+                    return
+                
+                selected_item = results[idx]
+                skill_name = selected_item["name"]
+                
+                print(f"\n📥 Descargando {skill_name}...")
+                # Obtener el .cursorrules dentro de la carpeta
+                rule_url = f"https://api.github.com/repos/PatrickJS/awesome-cursorrules/contents/rules/{skill_name}/.cursorrules"
+                rule_req = urllib.request.Request(rule_url, headers={"User-Agent": "code-reviewer-cli"})
+                
+                with urllib.request.urlopen(rule_req, timeout=10.0, context=context) as rule_res:
+                    if rule_res.status == 200:
+                        rule_data = json.loads(rule_res.read().decode("utf-8"))
+                        download_url = rule_data.get("download_url")
+                        
+                        if download_url:
+                            # Descargar el contenido
+                            dl_req = urllib.request.Request(download_url, headers={"User-Agent": "code-reviewer-cli"})
+                            with urllib.request.urlopen(dl_req, timeout=10.0, context=context) as dl_res:
+                                dl_content = dl_res.read().decode("utf-8")
+                                
+                                import os
+                                # Guardar localmente
+                                local_dir = os.path.join(".", ".agents", "skills", skill_name)
+                                os.makedirs(local_dir, exist_ok=True)
+                                
+                                file_path = os.path.join(local_dir, "SKILL.md")
+                                if os.path.exists(file_path):
+                                    print(f"\n⚠️  El skill '{skill_name}' ya existe localmente. No se sobreescribirá para respetar tus patrones de diseño.")
+                                else:
+                                    with open(file_path, "w", encoding="utf-8") as fw:
+                                        fw.write(f"---\nname: {skill_name}\ndescription: Reglas de cursorrules portadas a code-reviewer\n---\n\n")
+                                        fw.write(dl_content)
+                                    print(f"\n✅ Skill '{skill_name}' instalado con éxito en {file_path}")
+                        else:
+                            print("\n❌ No se encontró la URL de descarga del archivo .cursorrules.")
+                
+    except urllib.error.HTTPError as e:
+        print(f"\n❌ Error de API: {e.code} {e.reason}")
+    except Exception as e:
+        print(f"\n❌ Error al buscar skills: {str(e)}")
+        
+    input(t("press_enter_continue"))
+
+def execute_option(choice: int):
+    """Ejecuta la acción asociada al número de opción elegido."""
+    if choice == 1:
+        clear_screen()
+        print(f"{CYAN}{t('git_title')}{RESET}")
+        run_agent_query(t("git_query"))
+        input(t("press_enter"))
+        
+    elif choice == 2:
+        clear_screen()
+        print(f"{CYAN}{t('file_title')}{RESET}")
+        file_path = input(t("file_prompt")).strip()
+        if not file_path:
+            print(t("file_empty"))
+            input(t("press_enter"))
+            return
+            
+        import os
+        if not os.path.exists(file_path):
+            print(f"Buscando '{file_path}' en los archivos locales...")
+            found = []
+            for root, dirs, files in os.walk("."):
+                dirs[:] = [d for d in dirs if d not in [".git", "node_modules", ".venv", "__pycache__", "vendor"]]
+                for f in files:
+                    if f.endswith((".py", ".js", ".ts", ".php", ".java", ".cs", ".go", ".rb", ".json", ".md")):
+                        p = os.path.join(root, f)
+                        try:
+                            with open(p, "r", encoding="utf-8") as fp:
+                                if file_path in fp.read():
+                                    found.append(p)
+                        except:
+                            pass
+            if not found:
+                print(t("file_not_exist", file_path))
+                input(t("press_enter"))
+                return
+            elif len(found) > 1:
+                idx = select_from_menu(f"Múltiples coincidencias para '{file_path}':", found)
+                if idx >= 0:
+                    file_path = found[idx]
+                else:
+                    return
+            else:
+                file_path = found[0]
+                print(f"Encontrado en: {file_path}")
+            
+        run_agent_query(t("file_query", file_path))
+        input(t("press_enter"))
+        
+    elif choice == 3:
+        clear_screen()
+        print(f"{CYAN}{t('skills_title')}{RESET}")
+        run_agent_query(t("skills_query"))
+        input(t("press_enter"))
+        
     elif choice == 4:
         configure_settings()
         
     elif choice == 5:
+        search_and_install_skills()
+
+    elif choice == 6:
+        print(t("exit_msg"))
+
+
+def detect_project_technologies() -> list:
+    import os, json
+    techs = set()
+    
+    # Node.js
+    if os.path.exists("package.json"):
+        techs.add("node")
+        try:
+            with open("package.json", "r", encoding="utf-8") as f:
+                data = json.load(f)
+                deps = {**data.get("dependencies", {}), **data.get("devDependencies", {})}
+                for dep in deps:
+                    if "react" in dep: techs.add("react")
+                    if "next" in dep: techs.add("next")
+                    if "nextjs" in dep: techs.add("nextjs")
+                    if "vue" in dep: techs.add("vue")
+                    if "nuxt" in dep: techs.add("nuxt")
+                    if "angular" in dep: techs.add("angular")
+                    if "svelte" in dep: techs.add("svelte")
+                    if "express" in dep: techs.add("express")
+                    if "nestjs" in dep: techs.add("nestjs")
+                    if "tailwindcss" in dep: techs.add("tailwindcss")
+                    if "typescript" in dep: techs.add("typescript")
+        except: pass
+        
+    # Python
+    if os.path.exists("requirements.txt") or os.path.exists("pyproject.toml") or os.path.exists("Pipfile"):
+        techs.add("python")
+        try:
+            if os.path.exists("requirements.txt"):
+                with open("requirements.txt", "r", encoding="utf-8") as f:
+                    reqs = f.read().lower()
+                    if "django" in reqs: techs.add("django")
+                    if "flask" in reqs: techs.add("flask")
+                    if "fastapi" in reqs: techs.add("fastapi")
+        except: pass
+
+    # Go
+    if os.path.exists("go.mod"):
+        techs.add("go")
+        techs.add("golang")
+        
+    # PHP
+    if os.path.exists("composer.json"):
+        techs.add("php")
+        try:
+            with open("composer.json", "r", encoding="utf-8") as f:
+                comp = f.read().lower()
+                if "laravel" in comp: techs.add("laravel")
+                if "symfony" in comp: techs.add("symfony")
+        except: pass
+        
+    # Java / Kotlin
+    if os.path.exists("pom.xml") or os.path.exists("build.gradle") or os.path.exists("build.gradle.kts"):
+        techs.add("java")
+        if os.path.exists("build.gradle.kts"): techs.add("kotlin")
+        
+    # Rust
+    if os.path.exists("Cargo.toml"):
+        techs.add("rust")
+        
+    # Ruby
+    if os.path.exists("Gemfile"):
+        techs.add("ruby")
+        try:
+            with open("Gemfile", "r", encoding="utf-8") as f:
+                if "rails" in f.read().lower(): techs.add("rails")
+        except: pass
+
+    return list(techs)
+
+def search_and_install_skills():
+    """Busca e instala skills desde PatrickJS/awesome-cursorrules."""
+    clear_screen()
+    print(f"{CYAN}--- BUSCAR E INSTALAR SKILLS (GITHUB) ---{RESET}")
+    
+    print("\n🔍 Detectando tecnologías en el proyecto...")
+    techs = detect_project_technologies()
+    
+    if not techs:
+        print("\n⚠️  No se pudo detectar automáticamente el lenguaje o framework del proyecto.")
+        search_terms = input("Ingresá el lenguaje o framework a buscar (ej. react, python): ").strip().lower().split(",")
+        search_terms = [t.strip() for t in search_terms if t.strip()]
+        if not search_terms:
+            print(t("file_empty"))
+            input(t("press_enter_continue"))
+            return
+    else:
+        print(f"✅ Tecnologías detectadas: {', '.join(techs)}")
+        search_terms = techs
+        
+    print("\n📥 Buscando en PatrickJS/awesome-cursorrules...")
+    import urllib.request
+    import urllib.error
+    import json
+    import ssl
+    
+    url = "https://api.github.com/repos/PatrickJS/awesome-cursorrules/contents/rules"
+    req = urllib.request.Request(url, headers={"User-Agent": "code-reviewer-cli"})
+    
+    try:
+        context = ssl._create_unverified_context()
+        with urllib.request.urlopen(req, timeout=10.0, context=context) as response:
+            if response.status == 200:
+                data = json.loads(response.read().decode("utf-8"))
+                
+                # Filtrar resultados (ahora son archivos .mdc o .cursorrules en la raíz de /rules)
+                results = []
+                seen_names = set()
+                for item in data:
+                    if item["type"] == "file" and (item["name"].endswith(".mdc") or item["name"].endswith(".cursorrules")):
+                        item_name = item["name"].lower()
+                        for term in search_terms:
+                            if term in item_name and item["name"] not in seen_names:
+                                results.append(item)
+                                seen_names.add(item["name"])
+                
+                if not results:
+                    print(f"\n❌ No se encontraron skills para las tecnologías: {', '.join(search_terms)}")
+                    input(t("press_enter_continue"))
+                    return
+                
+                # Mostrar menú
+                options = [item["name"] for item in results] + [t("back")]
+                idx = select_from_menu(f"Resultados para {', '.join(search_terms)}", options)
+                
+                if idx == -1 or idx == len(options) - 1:
+                    return
+                
+                selected_item = results[idx]
+                file_name = selected_item["name"]
+                skill_folder_name = file_name.replace(".mdc", "").replace(".cursorrules", "")
+                
+                print(f"\n📥 Descargando {file_name}...")
+                download_url = selected_item.get("download_url")
+                
+                if download_url:
+                    dl_req = urllib.request.Request(download_url, headers={"User-Agent": "code-reviewer-cli"})
+                    with urllib.request.urlopen(dl_req, timeout=10.0, context=context) as dl_res:
+                        dl_content = dl_res.read().decode("utf-8")
+                        
+                        import os
+                        local_dir = os.path.join(".", ".agents", "skills", skill_folder_name)
+                        os.makedirs(local_dir, exist_ok=True)
+                        
+                        file_path = os.path.join(local_dir, "SKILL.md")
+                        if os.path.exists(file_path):
+                            print(f"\n⚠️  El skill '{skill_folder_name}' ya existe localmente. No se sobreescribirá.")
+                        else:
+                            with open(file_path, "w", encoding="utf-8") as fw:
+                                fw.write(f"---\nname: {skill_folder_name}\ndescription: Reglas portadas de {file_name} a code-reviewer\n---\n\n")
+                                fw.write(dl_content)
+                            print(f"\n✅ Skill '{skill_folder_name}' instalado con éxito en {file_path}")
+                else:
+                    print("\n❌ No se encontró la URL de descarga del archivo.")
+                
+    except urllib.error.HTTPError as e:
+        print(f"\n❌ Error de API: {e.code} {e.reason}")
+    except Exception as e:
+        print(f"\n❌ Error al buscar skills: {str(e)}")
+        
+    input(t("press_enter_continue"))
+
+def execute_option(choice: int):
+    """Ejecuta la acción asociada al número de opción elegido."""
+    if choice == 1:
+        clear_screen()
+        print(f"{CYAN}{t('git_title')}{RESET}")
+        run_agent_query(t("git_query"))
+        input(t("press_enter"))
+        
+    elif choice == 2:
+        clear_screen()
+        print(f"{CYAN}{t('file_title')}{RESET}")
+        file_path = input(t("file_prompt")).strip()
+        if not file_path:
+            print(t("file_empty"))
+            input(t("press_enter"))
+            return
+            
+        import os
+        if not os.path.exists(file_path):
+            print(f"Buscando '{file_path}' en los archivos locales...")
+            found = []
+            for root, dirs, files in os.walk("."):
+                dirs[:] = [d for d in dirs if d not in [".git", "node_modules", ".venv", "__pycache__", "vendor"]]
+                for f in files:
+                    if f.endswith((".py", ".js", ".ts", ".php", ".java", ".cs", ".go", ".rb", ".json", ".md")):
+                        p = os.path.join(root, f)
+                        try:
+                            with open(p, "r", encoding="utf-8") as fp:
+                                if file_path in fp.read():
+                                    found.append(p)
+                        except:
+                            pass
+            if not found:
+                print(t("file_not_exist", file_path))
+                input(t("press_enter"))
+                return
+            elif len(found) > 1:
+                idx = select_from_menu(f"Múltiples coincidencias para '{file_path}':", found)
+                if idx >= 0:
+                    file_path = found[idx]
+                else:
+                    return
+            else:
+                file_path = found[0]
+                print(f"Encontrado en: {file_path}")
+            
+        run_agent_query(t("file_query", file_path))
+        input(t("press_enter"))
+        
+    elif choice == 3:
+        clear_screen()
+        print(f"{CYAN}{t('skills_title')}{RESET}")
+        run_agent_query(t("skills_query"))
+        input(t("press_enter"))
+        
+    elif choice == 4:
+        configure_settings()
+        
+    elif choice == 5:
+        search_and_install_skills()
+
+    elif choice == 6:
         print(t("exit_msg"))
 
 def configure_settings_interactive():
@@ -483,7 +943,7 @@ def configure_settings_interactive():
     temp_key = vars.get("GOOGLE_API_KEY", "")
     temp_anthropic_key = vars.get("ANTHROPIC_API_KEY", "")
     temp_openai_key = vars.get("OPENAI_API_KEY", "")
-    temp_model = vars.get("GEMINI_MODEL", "gemini-2.5-flash")
+    temp_model = vars.get("GEMINI_MODEL", "gemini-3.5-flash")
     temp_lang = vars.get("CLI_LANG", "es").strip().lower()
     temp_veracity = vars.get("REVIEW_VERACITY", "strict").strip().lower()
     
@@ -659,7 +1119,7 @@ def configure_settings_interactive():
 def configure_settings_non_interactive():
     """Configuración secuencial fallback para entornos no-interactivos."""
     vars = load_env_vars()
-    current_model = vars.get("GEMINI_MODEL", "gemini-2.5-flash")
+    current_model = vars.get("GEMINI_MODEL", "gemini-3.5-flash")
     current_lang = vars.get("CLI_LANG", "es").strip().lower()
     current_veracity = vars.get("REVIEW_VERACITY", "strict").strip().lower()
     
@@ -751,7 +1211,7 @@ def configure_settings():
 def menu_interactive():
     """Loop del menú interactivo principal por teclado."""
     selected_index = 0
-    options = ["opt_1", "opt_2", "opt_3", "opt_4", "opt_5"]
+    options = ["opt_1", "opt_2", "opt_3", "opt_4", "opt_5", "opt_6"]
     
     while True:
         clear_screen()
@@ -773,17 +1233,17 @@ def menu_interactive():
             selected_index = (selected_index - 1) % len(options)
         elif key == "down":
             selected_index = (selected_index + 1) % len(options)
-        elif key in ["1", "2", "3", "4", "5"]:
+        elif key in ["1", "2", "3", "4", "5", "6"]:
             selected_index = int(key) - 1
             execute_option(selected_index + 1)
-            if selected_index == 4:
+            if selected_index == 5:
                 break
         elif key == "enter":
             execute_option(selected_index + 1)
-            if selected_index == 4:
+            if selected_index == 5:
                 break
         elif key == "esc":
-            execute_option(5)
+            execute_option(6)
             break
 
 def menu_non_interactive():
@@ -798,19 +1258,20 @@ def menu_non_interactive():
         print(f"3. {t('opt_3')}")
         print(f"4. {t('opt_4')}")
         print(f"5. {t('opt_5')}")
+        print(f"6. {t('opt_6')}")
         print("==================================================")
         
         try:
-            opcion = input("Seleccioná una opción [1-5]: ").strip()
+            opcion = input("Seleccioná una opción [1-6]: ").strip()
         except KeyboardInterrupt:
             print(t("exit_msg"))
             break
         except EOFError:
             break
             
-        if opcion in ["1", "2", "3", "4", "5"]:
+        if opcion in ["1", "2", "3", "4", "5", "6"]:
             execute_option(int(opcion))
-            if opcion == "5":
+            if opcion == "6":
                 break
         else:
             print(t("invalid_opt"))
