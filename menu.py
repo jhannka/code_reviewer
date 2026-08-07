@@ -244,9 +244,22 @@ def check_for_updates():
     except Exception:
         pass
 
+def get_local_version():
+    try:
+        ver = subprocess.check_output(
+            ["git", "describe", "--tags", "--always"], 
+            cwd=INSTALL_DIR, 
+            stderr=subprocess.DEVNULL
+        ).decode().strip()
+        if ver.startswith('v'):
+            return ver.lstrip('v')
+    except Exception:
+        pass
+    return __version__.lstrip("v")
+
 def _prompt_update_if_needed(tag_name: str, body: str):
     remote_ver = tag_name.lstrip("v")
-    local_ver = __version__.lstrip("v")
+    local_ver = get_local_version()
     if remote_ver != local_ver:
         try:
             remote_parts = [int(x) for x in remote_ver.split(".")]
